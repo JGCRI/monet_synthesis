@@ -66,11 +66,11 @@ hist(ph_rst/10)
 
 # clay
 gdal_translate(paste0(sg_url,'clay/clay_0-5cm_mean.vrt'), #g/kg
-               "./crop_roi_igh_clay.tif",
+               ".data/crop_roi_igh_clay.tif",
                tr=c(250,250),
                projwin=bb,
                projwin_srs =igh)
 
-clay_rst = rast("./crop_roi_igh_clay.tif")
+clay_rst = rast(".data/crop_roi_igh_clay.tif")
 plot(clay_rst/10) #g/100g ie., %
 hist(clay_rst/10)
