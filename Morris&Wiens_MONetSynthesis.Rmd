@@ -19,24 +19,21 @@ library(dplyr)
 library(tidyr)
 library(ggplot2)
 library(sf)
-library(terra)
-library(raster)
-
+#library(terra)
+#library(raster)
 ```
 
 ## Reading pH and Clay content data from MONet
 
-```{r pressure}
-# set data_dir to a path to your data folder for MONet data
-data_dir <- "C:/Users/wien002/OneDrive - PNNL/Desktop/MONet/"
+```{r Read in Data}
 
 # read in site coordinates
-monet_pH_coord <- read.csv(paste0(data_dir, "data/pH/processed_data/Coordinates.csv"))
-monet_clay_coord <- read.csv(paste0(data_dir, "data/clay/processed_data/Coordinates.csv"))
+monet_pH_coord <- read.csv("data/pH/processed_data/Coordinates.csv")
+monet_clay_coord <- read.csv("data/clay/processed_data/Coordinates.csv")
 
 # read in site data
-monet_pH_data <- read.csv(paste0(data_dir, "data/pH/processed_data/Soil_BioChemical_properties.csv"))
-monet_clay_data <- read.csv(paste0(data_dir, "data/clay/processed_data/Soil_BioChemical_properties.csv"))
+monet_pH_data <- read.csv("data/pH/processed_data/Soil_BioChemical_properties.csv")
+monet_clay_data <- read.csv("data/clay/processed_data/Soil_BioChemical_properties.csv")
 
 ```
 
@@ -69,7 +66,7 @@ Extract Koppen climate zones for each MONet sample for comparision across climat
 # Load in climate zone shapefile
 ```{r}
 # Load the shapefile as an `sf` object
-climate_zones_sf <- st_read(paste0(data_dir, "/na_climatezones_shapefile/climatezones_shapefile/NA_ClimateZones/data/North_America_Climate_Zones.shp"))
+climate_zones_sf <- st_read("data/na_climatezones_shapefile/climatezones_shapefile/NA_ClimateZones/data/North_America_Climate_Zones.shp")
 
 state_abbreviations_conus <- c(
   "AL", "AZ", "AR", "CA", "CO", 
@@ -87,7 +84,7 @@ state_abbreviations_conus <- c(
 climate_zone_mapping <- climate_zones_sf%>%
   distinct(Code, Climate)
 
-CONUS_sf <- st_read(paste0(data_dir, "data/s_18mr25/s_18mr25.shp"))%>%
+CONUS_sf <- st_read("data/s_18mr25/s_18mr25.shp")%>%
   st_transform(st_crs(climate_zones_sf))%>%
   filter(STATE %in% state_abbreviations_conus)
 
