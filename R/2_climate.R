@@ -13,8 +13,8 @@ process_climate_data <- function(coords_df, ID_column) {
   coords_data$ID <- seq_len(nrow(coords_data))
 
   # WorldClim data extraction
-  tavg <- worldclim_global("tavg", "10", "worldclim_data/")
-  tprec <- worldclim_global("prec", "10", "worldclim_data/")
+  tavg <- worldclim_global("tavg", "10", "data/worldclim_data/")
+  tprec <- worldclim_global("prec", "10", "data/worldclim_data/")
 
   tavg_extracted <- terra::extract(tavg, coords_data[, c("lon", "lat")])
   tprec_extracted <- terra::extract(tprec, coords_data[, c("lon", "lat")])
