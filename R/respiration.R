@@ -1,19 +1,23 @@
 
 library(dplyr)
+library(ggplot2)
 library(sf)
 
 # read in site coordinates
-monet_rs <- read.csv("data/1000S_processed_L2_summary.csv")
-rs_coord <- read.csv("data/1000Soils_Metadata_Site_Mastersheet_v1.csv")
+monet_rs <- read.csv("data/MONet/1000S_processed_L2_summary.csv")
+rs_coord <- read.csv("data/MONet/1000Soils_Metadata_Site_Mastersheet_v1.csv")
 srdb <- read.csv("data/srdb/srdb-20250503a/srdb-data.csv")
 
 # Read and ensure valid shapes for CONUS
-shape_valid <- st_read("data/s_18mr25/s_18mr25.shp") %>%
+shape_valid <- st_read("data/shapefiles/s_18mr25/s_18mr25.shp") %>%
   st_make_valid() %>%
   filter(STATE %in% state_abbreviations_conus)
 
 # Define the target CRS from the shapefile
 target_crs <- st_crs(shape_valid)
+
+# Disable S2 processing to use GEOS for spatial operations
+sf_use_s2(FALSE)
 
 # Filter SRDB coordinates within shapefile boundaries
 SRDB_coords <- srdb %>%
