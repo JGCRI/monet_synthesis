@@ -25,7 +25,11 @@ knitr::opts_chunk$set(
 
 # Introduction
 
+<<<<<<< Updated upstream
 This R markdown is designed to be a guide for systematically comparing and integrating MONet soil data with publicly available datasets such as SoilGrids (Hengl et al., 2017) and the Soil Respiration Database (SRDB, Jian et al., 2021). This script executes a series of three comparative and statistical analyses involving 1) soil respiration relative to mean annual precipitation (MAP) and mean annual temperature (MAT), 2) assessments of soil pH within Köppen climatic zones, 3) and the spatial distribution of soil clay content (Table 1). Due to differences in the spatial scale of global data products verses a nationally focused effort such as MONet, the response of soil properties to known drivers will be our metric of comparison (Collier et al., 2018; Shao et al., 2013).
+=======
+This R markdown is designed to be a guide for systematically comparing and integrating MONet soil data with publicly available datasets such as SoilGrids (Hengl et al., 2017) and the Soil Respiration Database (SRDB, Jian et al., 2021). We will execute a set of three comparative and statistical analyses involving 1) soil respiration relative to mean annual precipitation (MAP) and mean annual temperature (MAT), 2) assessments of soil pH within Köppen climatic zones, 3) and the spatial distribution of soil clay content (Table 1). Due to differences in the spatial scale of global data products verses a nationally focused effort such as MONet, the response of soil properties to known drivers will be our metric of comparison (Collier et al., 2018; Shao et al., 2013). For an up-scaled comparison of soil clay content.....
+>>>>>>> Stashed changes
 
 ## Load Packages
 
@@ -69,7 +73,11 @@ names(myColors) <- c("MONet_resp", "MONet_pH", "MONet_clay", "comp_clay", "comp_
 
 ## Read in MONet respiration and SRDB data
 
+<<<<<<< Updated upstream
 Read in the experiment data and associated sample location files for the MONet and the SRDB soil respiration data and filter for observations located in the Continental United States (CONUS). The target coordinate reference system (CRS) is defined as WGS84 in this chunk and used to ensure spatial consistency through the rest of the markdown. The coordinates of MONet and SRDB locations are plotted for reference.
+=======
+Read in the data and sample location files for the MONet and the SRDB soil respiration data and filter for observations in the continental United States (CONUS)
+>>>>>>> Stashed changes
 
 If your data directory is missing any of the files below, download them from their respective sources into the "data" folder.
 
@@ -214,7 +222,7 @@ print(p_srdb_temp)
 
 ## Identify relationship between soil respiration in SRDB to MAP and MAT
 
-With the calculated MAP and MAT, use a simple linear model to test the influence of MAP and MAT on annual soil respiration.
+With the corresponding MAP and MAT, use a simple linear model to test the influence of MAP and MAT on annual soil respiration.
 
 ```{r SRDB MAP and MAT relationship}
 
@@ -264,7 +272,7 @@ plot_MAT <- ggplot(combined_data, aes(x = MAT, y = Rs_annual)) +
 
 ## Identify relationship between soil respiration in MONet to MAP and MAT
 
-With the calculated MAP and MAT, use a simple linear model to test the influence of MAP and MAT on annual soil respiration.
+Same as for SRDB, use a simple linear model to test the influence of MAP and MAT on short-term, incubated soil respiration.
 
 ```{r MONet MAP and MAT respiration relationship}
 
@@ -458,11 +466,11 @@ print(p_monet_MAT_core_96h)
 print(p_monet_MAP_core_96h)
 ```
 
-# pH and Clay Comparison between MONet and Soilgrids
+# pH and Clay Comparison between MONet and SoilGrids
 
 ## Reading pH and clay content data from MONet and 1000 soils database
 
-Read in the experiment data and sample location files for the pH and clay data from MONet and the 1000 soil database. If your data directory is missing any of the files below, download them from their respective sources put into the "data" folder.
+Read in the data and sample location files for the pH and clay data from MONet and the 1000 soil database. If your data directory is missing any of the files below, download them from their respective sources put into the "data" folder.
 
 [MONet](https://sc-data.emsl.pnnl.gov/monet)
 
@@ -486,9 +494,15 @@ metadata_1000s <- read.csv("data/MONet/1000Soils_Metadata_Site_Mastersheet_v1.cs
 
 ## Join pH and clay site locations to data and combine MONet and 1000 soils
 
+<<<<<<< Updated upstream
 Join the MONet soil sample data to the sample coordinates using the proposal ID and sample number of the associated data. The data from the 1000 soils experiment is joined to the corresponding coordinates using a similar method.
 
 MONet and 1000 soils data are then formatted and joined to create the a table of all measured pH and Clay data.
+=======
+For the MONet soil data we join the sample data to the sample coordinates using the proposal ID and sample number. The data from the 1000 soils experiment is joined in a similar fashion, however, only the site code is used to join the data.
+
+MONet and 1000 soils data are then manipulated and joined to create the complete pH and clay data.
+>>>>>>> Stashed changes
 
 ```{r Join data}
 
@@ -611,13 +625,17 @@ monet_clay <- bind_rows(monet_clay_loc, dplyr::select(processed_1000s_loc, -pH))
 
 ```
 
-## Extract Koppen Climate Zones for MONet data
+## Extract Köppen Climate Zones for MONet data
 
+<<<<<<< Updated upstream
 This section loads a shapefile of the Koppen Climate Zones of North America, filters the climate zone shapefile to CONUS, and extracts the climate region for each data site location in the MONet and 1000 soils experiments. All spatial data are transformed into the target CRS to ensure accuracy.
+=======
+This section walks through the steps of loading a shapefile of the Köppen climate zones of North America, filtering the shapefile to CONUS, and extracting the climate region for each data site location in the MONet and 1000 soils experiments.
+>>>>>>> Stashed changes
 
 If your data directory is missing the file below, download and move into the "data" folder.
 
-[North American Koppen Climate Zones](https://www.cec.org/north-american-environmental-atlas/climate-zones-of-north-america)
+[North American Köppen Climate Zones](https://www.cec.org/north-american-environmental-atlas/climate-zones-of-north-america)
 
 ## Load in North American Climate Zones
 
@@ -630,6 +648,15 @@ climate_zones_sf <- st_read("data/shapefiles/na_climatezones_shapefile/climatezo
 climate_zone_mapping <- climate_zones_sf%>%
   distinct(Code, Climate)
 
+<<<<<<< Updated upstream
+=======
+# Read in United States shapefile, transform to climate zone projection and filter to CONUS
+#TODO remove
+CONUS_sf <- st_read("data/shapefiles/s_18mr25/s_18mr25.shp") %>%
+  st_transform(st_crs(climate_zones_sf)) %>% 
+  filter(STATE %in% state_abbreviations_conus)
+
+>>>>>>> Stashed changes
 # Find intersection of climate zones and CONUS
 climate_zones_conus_sf <- climate_zones_sf%>%
   st_intersection(st_union(conus_valid))
@@ -646,7 +673,7 @@ ggplot() +
 
 ```
 
-## Convert MONet data points to `sf` objects and extract Koppen climate zone information
+## Convert MONet data points to `sf` objects and extract Köppen climate zone information
 
 Convert MONet pH and clay content data tables to sf objects using the `sf` package. The coordinates for MONet sample sites were collected using the basic WGS84 projection which is the default CRS for this analysis. The MONet data is then divided by the sample height. Each MONet sample core is 30cm and analysis is carried out on the top and bottom of the core, the top sample is the soil from 0cm (the surface) to 10cm under the surface and the bottom sample is from 20cm to 30cm under the surface. These depths exhibit different characteristics in the qualities in this analysis and therefore are handled separately.
 
@@ -663,6 +690,7 @@ pH_loc_sf <- st_as_sf(monet_pH, coords = c("longitude", "latitude"), crs = targe
 pH_loc_sf_top <- pH_loc_sf%>%filter(core_section == "TOP")
 pH_loc_sf_btm <- pH_loc_sf%>%filter(core_section == "BTM")
 
+<<<<<<< Updated upstream
 # Convert MONet clay content data into shapefile object setting CRS to the target WGS1984, clip points within CONUS
 clay_loc_sf <- st_as_sf(monet_clay, coords = c("longitude", "latitude"), crs = target_crs)%>%
   st_intersection(st_union(conus_valid))%>%
@@ -673,6 +701,9 @@ clay_loc_sf_top <- clay_loc_sf%>%filter(core_section == "TOP")
 clay_loc_sf_btm <- clay_loc_sf%>%filter(core_section == "BTM")
 
 # Join point data to Koppen shapefile to extract climate zone information for each point
+=======
+# Join point data to Köppen shapefile to extract region information for each point
+>>>>>>> Stashed changes
 pH_zones <- st_join(pH_loc_sf, climate_zones_conus_sf)%>%
   dplyr::select(proposal_id, sample, core_section, pH, source, Code, Climate, Key_EN, geometry)%>%
   filter(!is.na(Climate))
@@ -683,7 +714,7 @@ clay_zones <- st_join(clay_loc_sf, climate_zones_conus_sf)%>%
 
 ```
 
-# 2. Assessemnt of pH within Koppen Climate Zones
+# 2. Assessemnt of pH within Köppen Climate Zones
 
 ## Plot distribution of characteristics in each region
 
@@ -731,7 +762,11 @@ clay_zones%>%
 
 This chunk accomplishes two functions. First it extracts the soilgrids data at the location of each MONet sample site. The second function of this chunk is to extract the soilgrids data by their appropriate climate zone. 
 
+<<<<<<< Updated upstream
 First, read in the soil grids top and bottom clay content and pH data as raster files and projects them to the target CRS. Using the point location data of the MONet dataset, extract the soild grids data from the gridcell corresponding to the location of each MONet sample location. Then a for each soil grids data file, a function iterates through the climate zones and extracts the datapoints by the climate zone is it contained in.
+=======
+```{r SoilGrids data, echo=FALSE, warning=FALSE, message=FALSE}
+>>>>>>> Stashed changes
 
 8 tables and two raster files are saved to an Rdata in order to save time on repeated runs of the script. The large size and repeated processing of the spatial datasets results in this chunk taking a significant amount of time to run. 
 ```{r soilGrids data, warning=FALSE, message=FALSE}
@@ -744,6 +779,7 @@ if(!"sg_data.RData" %in% list.files()){
   sg_clay_0_5cm <- rast("./data/soilgrids/crop_roi_igh_clay_0-5cm.tif")
   sg_clay_15_30cm <- rast("./data/soilgrids/crop_roi_igh_clay_15-30cm.tif")
   
+<<<<<<< Updated upstream
   # pH soil grid rasters
   sg_pH_0_5cm <- rast("./data/soilgrids/crop_roi_igh_ph_0-5cm.tif")
   sg_pH_15_30cm <- rast("./data/soilgrids/crop_roi_igh_ph_15-30cm.tif")
@@ -756,6 +792,14 @@ if(!"sg_data.RData" %in% list.files()){
     project(crs(climate_zones_sf))
   
   sg_clay_btm_prj <- sg_clay_15_30cm%>%
+=======
+
+  # This step takes a long time
+  sg_clay_prj <- sg_clay %>%
+    project(crs(climate_zones_sf))
+  
+  sg_pH_prj <- sg_pH %>%
+>>>>>>> Stashed changes
     project(crs(climate_zones_sf))
   
   # pH projections
@@ -768,6 +812,7 @@ if(!"sg_data.RData" %in% list.files()){
   rm(sg_clay_0_5cm,sg_clay_15_30cm,sg_pH_0_5cm,sg_pH_15_30cm)
   #TODO slow step
   
+<<<<<<< Updated upstream
   # Extracts soil grids clay and pH data from the MONet site locations
   # Clay
   sg_clay_monet_top <- terra::extract(sg_clay_top_prj, clay_loc_sf_top, fun=mean, bind=TRUE)
@@ -788,6 +833,43 @@ if(!"sg_data.RData" %in% list.files()){
   sg_pH_monet_btm_values <- values(sg_pH_monet_btm)%>%
     mutate(crop_roi_igh_ph_15.30cm = crop_roi_igh_ph_15.30cm/10)
   
+=======
+  # Extracts soilgrids clay and pH data
+  # from the MONet site locations
+  sg_clay_monet <- terra::extract(sg_clay_prj,
+                                  clay_loc_sf,
+                                  fun=mean,
+                                  na.rm=TRUE,
+                                  bind=TRUE)
+  sg_clay_monet_values <- terra::values(sg_clay_monet)
+  
+  sg_pH_monet <- terra::extract(sg_pH_prj,
+                                pH_loc_sf,
+                                fun=mean,
+                                na.rm=TRUE,
+                                bind=TRUE)
+  sg_pH_monet_values <- terra::values(sg_pH_monet)
+  
+  sg_by_zone <- terra::extract(sg_clay_prj,
+                               climate_zones_conus_sf,
+                               fun ="table",
+                               na.rm=TRUE,
+                               bind=TRUE)
+
+  sg_clay_conus <- raster::mask(sg_clay_prj,CONUS_sf) %>%
+    project(crs(clay_loc_sf))
+  
+  sg_pH_conus <- raster::mask(sg_pH_prj, CONUS_sf) %>%
+    project(crs(pH_loc_sf))
+  
+  plot(sg_clay_conus)
+  
+  
+  
+  
+  # Convert sf to SpatVector
+climate_vect <- vect(climate_zones_conus_sf)
+>>>>>>> Stashed changes
 
   # 
   sg_clay_conus_top <- raster::mask(sg_clay_top_prj, conus_valid)%>%project(crs(clay_loc_sf_top))
@@ -1044,7 +1126,7 @@ clay_content_sg_top <- clay_top_long%>%
   filter(Climate %in% unique(clay_content_MONet_top$Climate))%>%
   rename(Clay_percent = "crop_roi_igh_clay_0.5cm")%>%
   dplyr::select(Climate, Clay_percent)%>%
-  mutate(source = "soilGrids",
+  mutate(source = "SoilGrids",
          Clay_percent = Clay_percent/10)
 
 clay_MONet_sg_top <- bind_rows(clay_content_MONet_top, clay_content_sg_top)
@@ -1076,7 +1158,7 @@ pH_sg_top <- pH_top_long%>%
   filter(Climate %in% unique(pH_MONet_top$Climate))%>%
   rename(pH = "crop_roi_igh_ph_0.5cm")%>%
   dplyr::select(Climate, pH)%>%
-  mutate(source = "soilGrids",
+  mutate(source = "SoilGrids",
          pH = pH/10)
 
 pH_MONet_sg_top <- bind_rows(pH_MONet_top, pH_sg_top)
@@ -1099,8 +1181,9 @@ pH_MONet_sg_btm <- bind_rows(pH_MONet_btm, pH_sg_btm)
 
 ```
 
-## Compare distributions of Clay and pH bewteen MONet and Soilgrids in aggregate and across climate zones
+## Compare distributions of clay and pH bewteen MONet and SoilGrids in aggregate and across climate zones
 
+<<<<<<< Updated upstream
 The following MONet sites were excluded from the following analysis since there was only one sample available for the climate zone:
 
 -   site
@@ -1181,6 +1264,46 @@ plot_data_pH_top <- pH_MONet_sg_top %>%
 
 
  
+=======
+```{r plot comparisons}
+# Boxplots of MONet and SoilGrids comparison by climate region
+ggplot(data = clay_MONet_sg, aes(x = Clay_percent, y = Climate, color = source))+
+  geom_violin()+
+  theme_bw()+
+  ggtitle("Percent Clay across Climate Zones in MONet and SoilGrids")+
+  xlab("Percent Clay")+ylab("Climate Zone")
+
+ggplot(data = pH_MONet_sg, aes(x = pH, y = Climate, color = source))+
+  geom_boxplot()+
+  theme_bw()+
+  ggtitle("pH across Climate Zones in MONet and SoilGrids")+
+  xlab("pH")+ylab("Climate Zone")
+
+ggplot(clay_MONet_sg, aes(x = Clay_percent, fill = source))+
+  geom_histogram(mapping = aes(y = after_stat(density)), position = "identity", alpha = 0.5)+
+  theme_bw()+
+  ggtitle("SoilGrids and MONet clay Share Distribution")
+
+ggplot(pH_MONet_sg, aes(x = pH, fill = source))+
+  geom_histogram(mapping = aes(y = after_stat(density)), position = "identity", alpha = 0.5)+
+  theme_bw()+
+  ggtitle("SoilGrids and MONet pH distribution")
+
+ggplot(clay_MONet_sg, aes(x = Clay_percent, fill = source))+
+  geom_histogram(mapping = aes(y = after_stat(density)), position = "identity", alpha = 0.5)+
+  theme_bw()+
+  facet_wrap(~Climate)+
+  ggtitle("SoilGrids and MONet clay Share Distribution by Climate Zone")
+
+ggplot(pH_MONet_sg, aes(x = pH, fill = source))+
+  geom_histogram(mapping = aes(y = after_stat(density)), position = "identity", alpha = 0.5)+
+  theme_bw()+
+  facet_wrap(~Climate, scale = "free_y")+
+  ggtitle("SoilGrids and MONet pH Distribution by Climate Zone")
+
+```
+```{r}
+>>>>>>> Stashed changes
 
 ```
 
