@@ -1,0 +1,30 @@
+
+Weighted Index Formula
+The formula for the weighted index with:
+Top section weighted at 65%,
+Bottom section weighted at 35%, and
+24-hour and 96-hour measurements equally weighted,
+
+Index = 0.5 × [ (0.65 × (24 hr Top + 96 hr Top)) + (0.35 × (24 hr Bottom + 96 hr Bottom)) ]
+Where:
+0.5 ensures 24-hour and 96-hour measurements are given equal weight.
+0.65 and 0.35 apply weights to the top and bottom sections respectively.
+Example Calculation
+Let’s assume the following hypothetical measurements for one core:
+24 hr Top: 5 mg C
+24 hr Bottom: 3 mg C
+96 hr Top: 20 mg C
+96 hr Bottom: 12 mg C
+Step-by-step calculation:
+Combine the Top section measurements:
+Top contribution = 0.65 × (24 hr Top + 96 hr Top)
+Top contribution = 0.65 × (5 + 20) = 0.65 × 25 = 16.25
+Combine the Bottom section measurements:
+Bottom contribution = 0.35 × (24 hr Bottom + 96 hr Bottom)
+Bottom contribution = 0.35 × (3 + 12) = 0.35 × 15 = 5.25
+Add the weighted contributions:
+Total combined weighted sum = Top contribution + Bottom contribution
+Total combined weighted sum = 16.25 + 5.25 = 21.5
+Normalize the contribution equally across 24-hour and 96-hour measurements:
+Index = 0.5 × Total combined weighted sum
+Index = 0.5 × 21.5 = 10.75

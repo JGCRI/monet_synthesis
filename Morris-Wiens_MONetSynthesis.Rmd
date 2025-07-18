@@ -11,6 +11,8 @@ output:
   pdf_document: 
     toc: true
     toc_depth: 2
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
