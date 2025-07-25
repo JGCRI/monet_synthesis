@@ -228,10 +228,22 @@ title("MONet site Biomes by MAP and MAT")
 
 ```
 
-
 ## Identify relationship between soil respiration in SRDB to MAP and MAT
 
-With the calculated MAP and MAT, use a simple linear model to test the influence of MAP and MAT on annual soil respiration.
+With the calculated MAP and MAT, use a simple linear model to test the influence of MAP and MAT on soil respiration.
+
+Soil respiration is converted from annual soil respiration to mgC/gSoil/day using the following assumptions and parameters:
+
+-   **Bulk density (**$\rho$): 1.85 g/cm³ (mass of soil per unit volume).
+-   **Effective soil depth (**$d$): **10 cm** as a common depth for soil respiration studies.
+-   **Area conversion**: 1 m² = 10,000 cm².
+-   **Molecular weight ratio**: 1 g C = 3.67 g CO2.
+
+Using the equation:
+
+\text{mg CO2 g⁻¹ soil day⁻¹} = \left( \frac{\text{g C m² yr⁻¹} \times 3.67}{365 \times 185,000} \right) \times 1,000
+
+For a detailed explanation of assumptions and the conversion process see `SRDB_to_mgC_gSoil_day.txt`
 
 ```{r SRDB MAP and MAT relationship}
 
@@ -247,31 +259,42 @@ srdb_annual <- srdb_data$annual %>%
 combined_data <- srdb_slim %>%
   inner_join(srdb_annual, by = "Record_number")
 
+#TODO Rs conversion here
+# Convert Rs from Rs annual to mgC/gSoil/day
+bulk_density_g_cm2 <- 1.85
+effective_soil_depth_cm <- 10
+C_molec_weight_ratio_gCo2_C <- 3.67 
+
+conversion_factor = 1000 * (C_molec_weight_ratio_gCo2_C/(365 * bulk_density_g_cm2 * 10^5))
+
+combined_data_mg_co2_c_g_soil_day <- combined_data%>%
+  mutate(Rs_mg_co2_g_24h = Rs_annual * conversion_factor)
+
 # Inspect the combined data
-head(combined_data)
+head(combined_data_mg_co2_c_g_soil_day)
 
 # Linear regression model to test the effect of MAP and MAT on Rs_annual
-model <- lm(Rs_annual ~ MAP + MAT, data = combined_data)
+model <- lm(Rs_annual ~ MAP + MAT, data = combined_data_mg_co2_c_g_soil_day)
 summary(model)
 
 # Print regression summary
 print(summary(model))
 
 # Plot Rs_annual vs MAP
-plot_MAP <- ggplot(combined_data, aes(x = MAP, y = Rs_annual)) +
+plot_MAP <- ggplot(combined_data_mg_co2_c_g_soil_day, aes(x = MAP, y = Rs_mg_co2_g_24h)) +
   geom_point(color = myColors["comp_resp"], alpha = 0.5) +
   geom_smooth(method = "lm", col = "blue") +
-  labs(title = "Effect of MAP on Rs_annual",
+  labs(title = "Effect of MAP on Rs (mg_co2_g_24h)",
        x = "Mean Annual Precipitation (MAP)",
        y = "Annual Soil Respiration (Rs_annual)") +
   theme_bw()+
   theme(axis.title.y = element_text(size = 7))
 
 # Plot Rs_annual vs MAT
-plot_MAT <- ggplot(combined_data, aes(x = MAT, y = Rs_annual)) +
+plot_MAT <- ggplot(combined_data_mg_co2_c_g_soil_day, aes(x = MAT, y = Rs_mg_co2_g_24h)) +
   geom_point(color = myColors["comp_resp"], alpha = 0.5) +
   geom_smooth(method = "lm", col = "red") +
-  labs(title = "Effect of MAT on Rs_annual",
+  labs(title = "Effect of MAT on Rs (mg_co2_g_24h)",
        x = "Mean Annual Temperature (MAT)",
        y = "Annual Soil Respiration (Rs_annual)") +
   theme_bw()+
@@ -308,61 +331,61 @@ combined_monet <- monet_rs_metadata %>%
   inner_join(monet_data$annual, by = c("Site_Code" = "place"))
 
 # Compute linear models and summarize using select() inside group_by
-lm_models <- combined_monet %>%
-  group_by(Core_Section) %>%
-  summarise(
-    model_MAT = list(lm(respiration_ppm_co2_c ~ MAT, data = dplyr::select(., MAT, respiration_ppm_co2_c))),
-    model_MAP = list(lm(respiration_ppm_co2_c ~ MAP, data = dplyr::select(., MAP, respiration_ppm_co2_c)))
-  )
-
-# Display model summaries for 'MAT' and 'MAP'
-for (i in 1:nrow(lm_models)) {
-  cat("Core Section: ", lm_models$Core_Section[i], "\n")
-  cat("Model MAT Summary:\n")
-  print(summary(lm_models$model_MAT[[i]]))
-  cat("\nModel MAP Summary:\n")
-  print(summary(lm_models$model_MAP[[i]]))
-  cat("\n----------------------\n")
-}
-
-# Plotting Rs_annual vs MAT and MAP for each Core_Section separately
-# Change 'Rs_annual' column as necessary to match the respiration data you are plotting
-
-p_monet_MAT_core <- ggplot(combined_monet, aes(x = MAT, y = respiration_ppm_co2_c, color = Core_Section)) +
-  geom_point(color = myColors["MONet_resp"], alpha = 0.5) +
-  geom_smooth(method = "lm", col = "black") +
-  facet_wrap(~Core_Section) +
-  labs(title = "Effect of MAT on Respiration by Core Section for Monet Data",
-       x = "Mean Annual Temperature (MAT)",
-       y = "Respiration (CO2 ppm in core sub-section)") +
-  theme_bw() +
-  theme(legend.position = "bottom",
-        axis.title.y = element_text(size = 7))
-
-p_monet_MAP_core <- ggplot(combined_monet, aes(x = MAP, y = respiration_ppm_co2_c, color = Core_Section)) +
-  geom_point(color = myColors["MONet_resp"], alpha = 0.5) +
-  geom_smooth(method = "lm", col = "black") +
-  facet_wrap(~Core_Section) +
-  labs(title = "Effect of MAP on Respiration by Core Section for Monet Data",
-       x = "Mean Annual Precipitation (MAP)",
-       y = "Respiration (CO2 ppm in core sub-section)") +
-  theme_bw() +
-  theme(legend.position = "bottom",
-        axis.title.y = element_text(size = 7))
-
-p_monet_SRDB_MAT <- ggarrange(p_monet_MAT_core, plot_MAT,
-          labels = c("MONet", "SRDB"),
-          nrow = 2, ncol = 1, 
-          heights = c(10,10),
-          vjust = -.2)+
-  theme(plot.margin = margin(.6,0,0,0, "cm"))
-
-p_monet_SRDB_MAP <- ggarrange(p_monet_MAP_core, plot_MAP,
-          labels = c("MONet", "SRDB"),
-          nrow = 2, ncol = 1, 
-          heights = c(10,10),
-          vjust = -.2)+
-  theme(plot.margin = margin(.6,0,0,0, "cm")) 
+# lm_models <- combined_monet %>%
+#   group_by(Core_Section) %>%
+#   summarise(
+#     model_MAT = list(lm(respiration_ppm_co2_c ~ MAT, data = dplyr::select(., MAT, respiration_ppm_co2_c))),
+#     model_MAP = list(lm(respiration_ppm_co2_c ~ MAP, data = dplyr::select(., MAP, respiration_ppm_co2_c)))
+#   )
+# 
+# # Display model summaries for 'MAT' and 'MAP'
+# for (i in 1:nrow(lm_models)) {
+#   cat("Core Section: ", lm_models$Core_Section[i], "\n")
+#   cat("Model MAT Summary:\n")
+#   print(summary(lm_models$model_MAT[[i]]))
+#   cat("\nModel MAP Summary:\n")
+#   print(summary(lm_models$model_MAP[[i]]))
+#   cat("\n----------------------\n")
+# }
+# 
+# # Plotting Rs_annual vs MAT and MAP for each Core_Section separately
+# # Change 'Rs_annual' column as necessary to match the respiration data you are plotting
+# 
+# p_monet_MAT_core <- ggplot(combined_monet, aes(x = MAT, y = respiration_ppm_co2_c, color = Core_Section)) +
+#   geom_point(color = myColors["MONet_resp"], alpha = 0.5) +
+#   geom_smooth(method = "lm", col = "black") +
+#   facet_wrap(~Core_Section) +
+#   labs(title = "Effect of MAT on Respiration by Core Section for Monet Data",
+#        x = "Mean Annual Temperature (MAT)",
+#        y = "Respiration (CO2 ppm in core sub-section)") +
+#   theme_bw() +
+#   theme(legend.position = "bottom",
+#         axis.title.y = element_text(size = 7))
+# 
+# p_monet_MAP_core <- ggplot(combined_monet, aes(x = MAP, y = respiration_ppm_co2_c, color = Core_Section)) +
+#   geom_point(color = myColors["MONet_resp"], alpha = 0.5) +
+#   geom_smooth(method = "lm", col = "black") +
+#   facet_wrap(~Core_Section) +
+#   labs(title = "Effect of MAP on Respiration by Core Section for Monet Data",
+#        x = "Mean Annual Precipitation (MAP)",
+#        y = "Respiration (CO2 ppm in core sub-section)") +
+#   theme_bw() +
+#   theme(legend.position = "bottom",
+#         axis.title.y = element_text(size = 7))
+# 
+# p_monet_SRDB_MAT <- ggarrange(p_monet_MAT_core, plot_MAT,
+#           labels = c("MONet", "SRDB"),
+#           nrow = 2, ncol = 1, 
+#           heights = c(10,10),
+#           vjust = -.2)+
+#   theme(plot.margin = margin(.6,0,0,0, "cm"))
+# 
+# p_monet_SRDB_MAP <- ggarrange(p_monet_MAP_core, plot_MAP,
+#           labels = c("MONet", "SRDB"),
+#           nrow = 2, ncol = 1, 
+#           heights = c(10,10),
+#           vjust = -.2)+
+#   theme(plot.margin = margin(.6,0,0,0, "cm")) 
 
 
 ```
@@ -371,9 +394,34 @@ p_monet_SRDB_MAP <- ggarrange(p_monet_MAP_core, plot_MAP,
 
 ```{r MAT and MAP plots, fig.align='center'}
 
-print(p_monet_SRDB_MAT)
+# print(p_monet_SRDB_MAT)
+# 
+# print(p_monet_SRDB_MAP)
 
-print(p_monet_SRDB_MAP)
+```
+
+To represent a single soil respiration data point for each MONet sample core, an index was developed which takes the top and bottom core sample into account. Given that the majority of molecular activity take place in the top layers of soil, the top sample is weighted .65 and the bottom sample .45. The one and four day respiration rates are weighted equally. 
+
+Index = 0.5 × [ (0.65 × (24 hr Top + 96 hr Top)) + (0.35 × (24 hr Bottom + 96 hr Bottom)) ]
+
+```{r}
+wide_monet <- combined_monet%>%
+  filter(!is.na(respiration_mg_co2_c_g_soil_day_24hour))%>%
+  mutate(Sample_Name = sub("_[A-Z]{3}$", "",Sample_Name))%>%
+  pivot_longer(cols = 3:4, names_to = "Rs_level", values_to = "value")%>%
+  unite(Rs_level, c(Core_Section, Rs_level), sep = "_")%>%
+  pivot_wider(values_from = value, names_from = Rs_level)
+
+
+MONet_index <- wide_monet%>%
+  mutate(Rs_index = 0.5 * (( 0.65 * (TOP_respiration_mg_co2_c_g_soil_day_24hour + TOP_respiration_mg_co2_c_g_soil_day_96hour)) + 
+                          0.35 * (BTM_respiration_mg_co2_c_g_soil_day_24hour + BTM_respiration_mg_co2_c_g_soil_day_96hour)))
+
+
+ggplot(MONet_index, aes(x = MAP, y = index))+geom_point()
+
+ggplot(MONet_index, aes(x = MAT, y = index))+geom_point()
+
 
 ```
 
@@ -382,16 +430,14 @@ print(p_monet_SRDB_MAP)
 ```{r MONet 24h respiration, fig.dim=c(6,4), fig.align='center'}
 
 # Compute linear models and summarize using select() inside group_by
-lm_models_24h <- combined_monet %>%
-  group_by(Core_Section) %>%
+lm_models_Rs_index <- MONet_index %>%
   summarise(
-    model_MAT = list(lm(respiration_mg_co2_c_g_soil_day_24hour ~ MAT, data = dplyr::select(., MAT, respiration_mg_co2_c_g_soil_day_24hour))),
-    model_MAP = list(lm(respiration_mg_co2_c_g_soil_day_24hour ~ MAP, data = dplyr::select(., MAP, respiration_mg_co2_c_g_soil_day_24hour)))
+    model_MAT = list(lm(Rs_index ~ MAT, data = dplyr::select(., MAT, Rs_index))),
+    model_MAP = list(lm(Rs_index ~ MAP, data = dplyr::select(., MAP, Rs_index)))
   )
 
 # Display model summaries for 'MAT' and 'MAP'
 for (i in 1:nrow(lm_models_24h)) {
-  cat("Core Section: ", lm_models_24h$Core_Section[i], "\n")
   cat("Model MAT Summary:\n")
   print(summary(lm_models_24h$model_MAT[[i]]))
   cat("\nModel MAP Summary:\n")
@@ -401,11 +447,10 @@ for (i in 1:nrow(lm_models_24h)) {
 
 # Plotting 24h respiration vs MAT and MAP for each Core_Section separately
 
-p_monet_MAT_core_24h <- ggplot(combined_monet, aes(x = MAT, y = respiration_mg_co2_c_g_soil_day_24hour, color = Core_Section)) +
+p_monet_MAT_core_24h <- ggplot(MONet_index, aes(x = MAT, y = Rs_index)) +
   geom_point(color = myColors["MONet_resp"], alpha = 0.5) +
   geom_smooth(method = "lm", col = "black") +
-  facet_wrap(~Core_Section) +
-  labs(title = "Effect of MAT on 24h Respiration by Core Section for Monet Data",
+  labs(title = "Effect of MAT on Respiration Index for Monet Data",
        x = "Mean Annual Temperature (MAT)",
        y = "Respiration (CO2 ppm in core sub-section)") +
   theme_bw() +
@@ -416,7 +461,7 @@ p_monet_MAP_core_24h <- ggplot(combined_monet, aes(x = MAP, y = respiration_mg_c
   geom_point(color = myColors["MONet_resp"], alpha = 0.5) +
   geom_smooth(method = "lm", col = "black") +
   facet_wrap(~Core_Section) +
-  labs(title = "Effect of MAP on 24h Respiration by Core Section for Monet Data",
+  labs(title = "Effect of MAP on Respiration Index for Monet Data",
        x = "Mean Annual Precipitation (MAP)",
        y = "Respiration (CO2 ppm in core sub-section)") +
   theme_bw() +
@@ -430,49 +475,49 @@ print(p_monet_MAP_core_24h)
 
 ```{r MONet 96h respiration, fig.dim=c(6,4), fig.align='center'}
 
-# Compute linear models and summarize using select() inside group_by
-lm_models_96h <- combined_monet %>%
-  group_by(Core_Section) %>%
-  summarise(
-    model_MAT = list(lm(respiration_mg_co2_c_g_soil_day_96hour ~ MAT, data = dplyr::select(., MAT, respiration_mg_co2_c_g_soil_day_96hour))),
-    model_MAP = list(lm(respiration_mg_co2_c_g_soil_day_96hour ~ MAP, data = dplyr::select(., MAP, respiration_mg_co2_c_g_soil_day_96hour)))
-  )
-
-# Display model summaries for 'MAT' and 'MAP'
-for (i in 1:nrow(lm_models_96h)) {
-  cat("Core Section: ", lm_models_96h$Core_Section[i], "\n")
-  cat("Model MAT Summary:\n")
-  print(summary(lm_models_96h$model_MAT[[i]]))
-  cat("\nModel MAP Summary:\n")
-  print(summary(lm_models_96h$model_MAP[[i]]))
-  cat("\n----------------------\n")
-}
-
-# Plotting 96h respiration vs MAT and MAP for each Core_Section separately
-
-p_monet_MAT_core_96h <- ggplot(combined_monet, aes(x = MAT, y = respiration_mg_co2_c_g_soil_day_96hour, color = Core_Section)) +
-  geom_point(color = myColors["MONet_resp"], alpha = 0.5) +
-  geom_smooth(method = "lm", col = "black") +
-  facet_wrap(~Core_Section) +
-  labs(title = "Effect of MAT on 96h Respiration by Core Section for Monet Data",
-       x = "Mean Annual Temperature (MAT)",
-       y = "Respiration (CO2 ppm in core sub-section)") +
-  theme_bw() +
-  theme(legend.position = "bottom")+
-  xlim(8,16)
-
-p_monet_MAP_core_96h <- ggplot(combined_monet, aes(x = MAP, y = respiration_mg_co2_c_g_soil_day_96hour, color = Core_Section)) +
-  geom_point(color = myColors["MONet_resp"], alpha = 0.5) +
-  geom_smooth(method = "lm", col = "black") +
-  facet_wrap(~Core_Section) +
-  labs(title = "Effect of MAP on 96h Respiration by Core Section for Monet Data",
-       x = "Mean Annual Precipitation (MAP)",
-       y = "Respiration (CO2 ppm in core sub-section)") +
-  theme_bw() +
-  theme(legend.position = "bottom")
-
-print(p_monet_MAT_core_96h)
-print(p_monet_MAP_core_96h)
+# # Compute linear models and summarize using select() inside group_by
+# lm_models_96h <- combined_monet %>%
+#   group_by(Core_Section) %>%
+#   summarise(
+#     model_MAT = list(lm(respiration_mg_co2_c_g_soil_day_96hour ~ MAT, data = dplyr::select(., MAT, respiration_mg_co2_c_g_soil_day_96hour))),
+#     model_MAP = list(lm(respiration_mg_co2_c_g_soil_day_96hour ~ MAP, data = dplyr::select(., MAP, respiration_mg_co2_c_g_soil_day_96hour)))
+#   )
+# 
+# # Display model summaries for 'MAT' and 'MAP'
+# for (i in 1:nrow(lm_models_96h)) {
+#   cat("Core Section: ", lm_models_96h$Core_Section[i], "\n")
+#   cat("Model MAT Summary:\n")
+#   print(summary(lm_models_96h$model_MAT[[i]]))
+#   cat("\nModel MAP Summary:\n")
+#   print(summary(lm_models_96h$model_MAP[[i]]))
+#   cat("\n----------------------\n")
+# }
+# 
+# # Plotting 96h respiration vs MAT and MAP for each Core_Section separately
+# 
+# p_monet_MAT_core_96h <- ggplot(combined_monet, aes(x = MAT, y = respiration_mg_co2_c_g_soil_day_96hour, color = Core_Section)) +
+#   geom_point(color = myColors["MONet_resp"], alpha = 0.5) +
+#   geom_smooth(method = "lm", col = "black") +
+#   facet_wrap(~Core_Section) +
+#   labs(title = "Effect of MAT on 96h Respiration by Core Section for Monet Data",
+#        x = "Mean Annual Temperature (MAT)",
+#        y = "Respiration (CO2 ppm in core sub-section)") +
+#   theme_bw() +
+#   theme(legend.position = "bottom")+
+#   xlim(8,16)
+# 
+# p_monet_MAP_core_96h <- ggplot(combined_monet, aes(x = MAP, y = respiration_mg_co2_c_g_soil_day_96hour, color = Core_Section)) +
+#   geom_point(color = myColors["MONet_resp"], alpha = 0.5) +
+#   geom_smooth(method = "lm", col = "black") +
+#   facet_wrap(~Core_Section) +
+#   labs(title = "Effect of MAP on 96h Respiration by Core Section for Monet Data",
+#        x = "Mean Annual Precipitation (MAP)",
+#        y = "Respiration (CO2 ppm in core sub-section)") +
+#   theme_bw() +
+#   theme(legend.position = "bottom")
+# 
+# print(p_monet_MAT_core_96h)
+# print(p_monet_MAP_core_96h)
 ```
 
 # pH and Clay Comparison between MONet and Soilgrids
@@ -676,11 +721,12 @@ clay_zones%>%
 
 # Read in soilGrids data and clip to CONUS
 
-This chunk accomplishes two functions. First it extracts the soilgrids data at the location of each MONet sample site. The second function of this chunk is to extract the soilgrids data by their appropriate climate zone. 
+This chunk accomplishes two functions. First it extracts the soilgrids data at the location of each MONet sample site. The second function of this chunk is to extract the soilgrids data by their appropriate climate zone.
 
 First, read in the soil grids top and bottom clay content and pH data as raster files and projects them to the target CRS. Using the point location data of the MONet dataset, extract the soild grids data from the gridcell corresponding to the location of each MONet sample location. Then a for each soil grids data file, a function iterates through the climate zones and extracts the datapoints by the climate zone is it contained in.
 
-8 tables and two raster files are saved to an Rdata in order to save time on repeated runs of the script. The large size and repeated processing of the spatial datasets results in this chunk taking a significant amount of time to run. 
+8 tables and two raster files are saved to an Rdata in order to save time on repeated runs of the script. The large size and repeated processing of the spatial datasets results in this chunk taking a significant amount of time to run.
+
 ```{r soilGrids data, warning=FALSE, message=FALSE}
 
 
@@ -735,8 +781,6 @@ if(!"sg_data.RData" %in% list.files()){
   sg_pH_monet_btm_values <- values(sg_pH_monet_btm)%>%
     mutate(crop_roi_igh_ph_15.30cm = crop_roi_igh_ph_15.30cm/10)
   
-
-  # 
   sg_clay_conus_top <- raster::mask(sg_clay_top_prj, conus_valid)%>%project(crs(clay_loc_sf_top))
   sg_clay_conus_btm <- raster::mask(sg_clay_btm_prj, conus_valid)%>%project(crs(clay_loc_sf_btm))
 
@@ -783,23 +827,17 @@ if(!"sg_data.RData" %in% list.files()){
     var_long <- do.call(rbind, lapply(names(values_by_zone), function(zone_name) {
       data.frame(zone = zone_name, value = values_by_zone[[zone_name]])
     }))
-    
     return(var_long)
   }
   
-  
   clay_top_long <- soilgrids_by_zone(sg_clay_conus_top, climate_zones_conus_sf)
-  
-  
-  # 11 min each
-  
   clay_btm_long <- soilgrids_by_zone(sg_clay_conus_btm, climate_zones_conus_sf)
 
   pH_top_long <- soilgrids_by_zone(sg_pH_conus_top, climate_zones_conus_sf)
   pH_btm_long <- soilgrids_by_zone(sg_pH_conus_btm, climate_zones_conus_sf)
 
   save(sg_clay_conus_top, sg_clay_conus_btm,
-       clay_top_long, clay_btm_long,
+       clay_top_long, clay_btm_long, sg_clay_top_prj,
        pH_top_long, pH_btm_long,
        sg_clay_monet_top_values, sg_clay_monet_btm_values,
        sg_pH_monet_top_values,sg_pH_monet_btm_values,
@@ -827,13 +865,13 @@ This analysis identified 6 MONet sample sites in locations with incomplete data 
 #TODO urban mispelling?
  # Clay content soil grids rasters
   sg_clay_0_5cm <- rast("./data/soilgrids/crop_roi_igh_clay_0-5cm.tif")
-  sg_clay_15_30cm <- rast("./data/soilgrids/crop_roi_igh_clay_15-30cm.tif")
+  # sg_clay_15_30cm <- rast("./data/soilgrids/crop_roi_igh_clay_15-30cm.tif")
 
 
   sg_clay_top_prj <- sg_clay_0_5cm%>%
     project(crs(climate_zones_sf))
-  sg_clay_btm_prj <- sg_clay_15_30cm%>%
-    project(crs(climate_zones_sf))
+  # sg_clay_btm_prj <- sg_clay_15_30cm%>%
+  #   project(crs(climate_zones_sf))
   
    
   monet_clay_missing <- rbind(sg_clay_monet_top_values%>%
@@ -1056,10 +1094,10 @@ pH_MONet_sg_btm <- bind_rows(pH_MONet_btm, pH_sg_btm)
 The following MONet sites were excluded from the following analysis since there was only one sample available for the climate zone:
 
 -   Anza Borrego Desert State (Hot Desert Climate)
--   Santa Rita Experimental Range NEON (Hot Semi-Arid Climate)			
--   Northern Great Plains Research Laboratory NEON (Humid Continental Hot Summers with Dry Winters)		
--   Dakota Coteau Field Site NEON (Humid Continental Mild Summer with Dry Winters)				
--   Peterson Farm (Temperate Oceanic Climate)				
+-   Santa Rita Experimental Range NEON (Hot Semi-Arid Climate)\
+-   Northern Great Plains Research Laboratory NEON (Humid Continental Hot Summers with Dry Winters)\
+-   Dakota Coteau Field Site NEON (Humid Continental Mild Summer with Dry Winters)\
+-   Peterson Farm (Temperate Oceanic Climate)\
 -   Beaver Creek, Washington (Warm-Summer Mediterranean Climate)
 
 For each region with more than one MONet site, 1,000 observations of Soilgrids data were randomly sampled to illustrate the distribution of pH and clay content in each climate zone.
