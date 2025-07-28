@@ -6,113 +6,84 @@
 <!-- badges: end -->
 
 
-# Introduction
+# MONet Data Synthesis and Comparison 
 
-`rtemplate` is a template for creating a basic R package with Continuous Integration (CI) via GitHub actions in the following steps:
+## What is MONet?
 
-<br>
-<br>
+The **M**olecular **O**bservation **Net**work is on ongoign project developed by the Environmental Molecular Sciences Laboratory at Pacific Northwest National Lab, with aims to create a continetial scale database of standardized soil molecular properties to advance the understanding of soil biogeochemistry.
+The **MONet Data Synthesis Project** aims to systematically compare and integrate soil data from the **Monitoring Soil National Network (MONet)** with publicly available datasets, such as **SoilGrids** and the **Soil Respiration Database (SRDB)**. This repository contains scripts to analyze and compare key soil properties (e.g., soil respiration, pH, and clay content) across diverse climatic zones, with an emphasis on addressing spatial scale differences between global datasets and national-scale, high-resolution efforts like MONet.
 
-<a href="https://raw.githubusercontent.com/JGCRI/rtemplate/main/vignettes/vignetteFigs/rtemplate_build_your_own_package.png?raw=true" onclick="window.open(this.href); return false;"><img src="https://raw.githubusercontent.com/JGCRI/rtemplate/main/vignettes/vignetteFigs/rtemplate_build_your_own_package.png?raw=true" max-width="80%"/></a>
+### Goals of the Analysis
 
-<br>
-<br>
+1. **Understand Soil Properties Relative to Environmental Drivers:**
+   - Explore soil respiration variations with mean annual precipitation (MAP) and mean annual temperature (MAT).
+   - Assess the spatial distribution and variability in pH and clay content at national and sub-national levels.
+   - Compare global trends (e.g., SoilGrids) with regional/national observations (e.g., MONet).
+2. **Cross-Dataset Validation:**
+   - Benchmark soil properties across MONet and publicly available soil datasets to evaluate consistency and spatial variability.
+3. **Enhance Data Accessibility:**
+   - Provide processed data, visualizations, and detailed scripts to the soil science, biogeochemistry, and environmental science communities.
 
-The folder structure is as shown below:
+---
 
-<br>
-<br>
+## Repository Overview
 
-<a href="https://raw.githubusercontent.com/JGCRI/rtemplate/main/vignettes/vignetteFigs/rtemplate_package_structure.png?raw=true" onclick="window.open(this.href); return false;"><img src="https://raw.githubusercontent.com/JGCRI/rtemplate/main/vignettes/vignetteFigs/rtemplate_package_structure.png?raw=true" max-width="80%"/></a>
+| **Folder**       | **Description**                                                                                  |
+|-------------------|--------------------------------------------------------------------------------------------------|
+| `data/`           | Directory for storing raw and publicly available datasets.                                       |
+| `scripts/`        | R Markdown scripts for data collection and processing		                               |
+| `figures/`        | Directory for saving plots and visual outputs from the analyses.                                 |
+|`MONetSynthesis.Rmd| R markdown file containing analysis of MONet data product.				       |
+| `README.md`       | Overview of the repository, datasets, and instructions for reproducing the analyses.             |
 
-<br>
-<br>
+---
 
-# 1 Clone or "Use this template"
+## Data Sources
 
-Navigate directly to https://github.com/JGCRI/rtemplate, click the shiny green button that says `Use this template` and be on your way.
+This project integrates multiple high-quality datasets. A summary of their sources and attributes is given below:
 
-You can also clone the template to view the files locally and then copy into your own repo as needed:
+| **Dataset**             | **Description**                                                                                                     | **Source**                                                                                                          |
+|-------------------------|---------------------------------------------------------------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------|
+| MONet Soil Respiration  | Processed soil respiration data collected in the United States.                                                    | [MONet Soil Respiration - Zenodo](https://zenodo.org/records/15328215)                                              |
+| MONet Clay and pH       | Clay content and pH of X number of soil samples in the United States                                               | [MONet](https://sc-data.emsl.pnnl.gov/monet)
+| SoilGrids               | Global gridded clay content and pH at 10km resolution.                         					| [SoilGrids](https://soilgrids.org/)                                                                                 |
+| SRDB                    | Soil respiration observations aggregated from published journal articles globally.                                  | [SRDB GitHub Repository](https://github.com/bpbond/srdb)                                                            |
+| Climate Zones           | Koppen-Geiger classification shapefile used for grouping comparisons by climatic similarities.                     | [North American Climate Atlas](https://www.cec.org/north-american-environmental-atlas/climate-zones-of-north-america) |
+| USA Shapefiles          | Spatial reference shapefiles for delineating site boundaries in the continental U.S.                               | [NOAA GIS US States Shapefiles](https://www.weather.gov/gis/USStates)                                               |
 
-```bash
-git clone https://github.com/JGCRI/rtemplate.git
-```
+---
 
-# 2 Update Package Information
+## Instructions to Gather and Prepare Data
 
-Update your information (package name and other details) in the following files:
+1. **Download Raw Data**:
+   - Clone this repository and navigate to the `data/` folder.
+   - Download the MONet data, Climate Zones, and USA shapefiles from the sources provided above and store them in the organized subdirectories.
+   - For SoilGrids and SRDB, run the get_SGdata.R and get_SRDBdata.R 
+   
+2. **Install Required R Packages**:
+   - Install all necessary R libraries used in this analysis
 
-- README.md
-- DESCRIPTION
-- LICENSE
+3. **Run Data Processing Scripts**
+   - Open and run provided R markdown (MONetDataProcessing.Rmd) script
+   - This script will take some time to run and saves a Rdata file to the directory
 
-# 3 Update Package Modules
+4. **Run Analysis Scripts**:
+   - Open the provided R markdown (MONetSynthesis.Rmd) script.
+   - Run the script to:
+     - Conduct exploratory analyses comparing respiration trends, MAP/MAT relationships, etc.
+     - Perform spatial and statistical comparisons on pH and clay content.
 
-This is where you write the main code for your model. We have include some key modules and tests. You should write tests for all your modules as you develop them.
+---
 
-- R\rtemplate.R (This defines your package and provides the help/documentation for the package.)
-- R\example_function.R (This is an example function with documentation. You can copy this to create other functions.)
+## Statistical and Comparative Focus Areas
+The analysis pipeline includes:
 
-# 4 Update Tests
+1. **Soil Respiration Analysis**:
+   - Relating soil carbon flux (respiration) to MAP and MAT across the U.S.
+   - Identifying climatic influences on observed trends using regression.
 
-We provide a sample test file that should be updated as you add in new modules and classes. These tests are linked to the GitHub Action so that every time you push any changes your tests are executed. The GitHub action also links to `codecov` so that you know how much of your code is covered by the tests you have written. You should aim to keep this percentage to above 70%.
+2. **pH and Clay Content Comparison**:
+   - Cross-referencing MONet-observed properties with SoilGrids' datasets spatially and within climatic zones.
 
-- tests\testthat.R (Update package name here)
-- tests\testthat\test-rtemplate.R (Write unit and integration tests for each of your functions here.)
-
-
-# 5 Update Package Documentation
-
-Update each of the following files to generate clean, clear documentation. When you push your changes to github the github actions described in the next section will automatically build the documentation page online for you. An example for this repo is available at: https://jgcri.github.io/rtemplate/. 
-
-- _pkgdown.yml
-- CITATION.md
-- CONTRIBUTE.md
-- DISCLAIMER
-- LICENSE
-- NEWS.md
-- SUPPORT.md
-
-Once your GitHub action for docs is complete (see section 6 GitHub Actions) you need the following steps to get your documentation page live online:
-
-<br>
-<br>
-
-<a href="https://raw.githubusercontent.com/JGCRI/rtemplate/main/vignettes/vignetteFigs/rtemplate_activate_docs.png?raw=true" onclick="window.open(this.href); return false;"><img src="https://raw.githubusercontent.com/JGCRI/rtemplate/main/vignettes/vignetteFigs/rtemplate_activate_docs.png?raw=true" max-width="80%"/></a>
-
-<br>
-<br>
-
-# 6 Github Actions
-
-The final piece is to check your GitHub actions for continuous integration. These actions have been written so they are trigger everytime you push to main or execute a pull request to main. There are four GitHub actions included with this package as follows: 
-
-- .github\workflows\build.yml (Tests if package builds on windows, macos, ubuntu)
-- .github\workflows\docs.yml (Automatically builds your documentation from the vignette folder and hosts on GitHub pages)
-- .github\workflows\test.yml (Runs your tests and check what percentage is covered on codecov. You will need to connect your repository to codecoverage for this to work as shown below.)
-
-<br>
-<br>
-
-<a href="https://raw.githubusercontent.com/JGCRI/rtemplate/main/vignettes/vignetteFigs/rtemplate_codecov.png?raw=true" onclick="window.open(this.href); return false;"><img src="https://raw.githubusercontent.com/JGCRI/rtemplate/main/vignettes/vignetteFigs/rtemplate_codecov.png?raw=true" max-width="80%"/></a>
-
-<br>
-<br>
-
-The final step is to add your badges to your repository as follows. Simply replace "rtemplate" with your own repo name in the following three badges and then paste these at the top of the README.md file and push:
-
-```
-[![build](https://github.com/JGCRI/rtemplate/actions/workflows/build.yml/badge.svg)](https://github.com/JGCRI/rtemplate/actions/workflows/build.yml)
-[![docs](https://github.com/JGCRI/rtemplate/actions/workflows/docs.yml/badge.svg)](https://github.com/JGCRI/rtemplate/actions/workflows/docs.yml)
-[![tests](https://github.com/JGCRI/rtemplate/actions/workflows/test.yml/badge.svg)](https://github.com/JGCRI/rtemplate/actions/workflows/test.yml)
-```
-For the codecoverage badge use the Markdown badge you copied from codecov as shown in the final step above.
-
-
-
-
-
-
-
-
-  
+4. **Data Visualization**:
+   - Generating maps of sample coverage and plots comparing different datasets.
