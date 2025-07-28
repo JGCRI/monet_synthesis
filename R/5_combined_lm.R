@@ -40,3 +40,14 @@ print(rs_index_results)
 
 
 str(combined_data)
+
+
+# Perform the conversion using the formula
+converted_srdb <- combined_data %>%
+  mutate(
+    Rs_daily_mg_per_g_soil = (Rs_annual * 1000) / (1.85 * 10 * 10000 * 365) # Conversion formula
+  )
+
+# View the converted data
+print(head(converted_srdb))
+
