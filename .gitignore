@@ -7,6 +7,8 @@
 *.png
 
 # User-specific files
+*.html
+sg_data.Rdata
 .Ruserdata
 /data/
 
