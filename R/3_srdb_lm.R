@@ -1,6 +1,6 @@
 
 srdb %>%
-  select(Rs_annual, Record_number) -> srdb_slim
+  dplyr::select(Rs_annual, Record_number) -> srdb_slim
 
 # Rename the 'place' column in srdb_data$annual to match 'Record_number' in srdb_slim
 srdb_annual <- srdb_data$annual %>%

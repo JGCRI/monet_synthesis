@@ -35,7 +35,7 @@ sf_use_s2(FALSE)
 
 # Filter SRDB coordinates within shapefile boundaries
 SRDB_coords <- srdb %>%
-  select(Record_number, Latitude, Longitude) %>%
+  dplyr::select(Record_number, Latitude, Longitude) %>%
   na.omit() %>%
   st_as_sf(coords = c("Longitude", "Latitude"), crs = 4326) %>%
   st_transform(target_crs) %>%

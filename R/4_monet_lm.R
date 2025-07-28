@@ -1,7 +1,7 @@
 
 
 monet_rs %>%
-  select(Sample_Name, respiration_ppm_co2_c,
+  dplyr::select(Sample_Name, respiration_ppm_co2_c,
          respiration_mg_co2_c_g_soil_day_24hour,
          respiration_mg_co2_c_g_soil_day_96hour) -> monet_slim
 
@@ -34,8 +34,8 @@ combined_monet <- monet_rs_metadata %>%
 lm_models <- combined_monet %>%
   group_by(Core_Section) %>%
   summarise(
-    model_MAT = list(lm(respiration_ppm_co2_c ~ MAT, data = select(., MAT, respiration_ppm_co2_c))),
-    model_MAP = list(lm(respiration_ppm_co2_c ~ MAP, data = select(., MAP, respiration_ppm_co2_c)))
+    model_MAT = list(lm(respiration_ppm_co2_c ~ MAT, data = dplyr::select(., MAT, respiration_ppm_co2_c))),
+    model_MAP = list(lm(respiration_ppm_co2_c ~ MAP, data = dplyr::select(., MAP, respiration_ppm_co2_c)))
   )
 
 # Display model summaries for 'MAT' and 'MAP'
@@ -47,9 +47,6 @@ for (i in 1:nrow(lm_models)) {
   print(summary(lm_models$model_MAP[[i]]))
   cat("\n----------------------\n")
 }
-
-# View the model summaries
-print(model_summaries)
 
 # Plotting Rs_annual vs MAT and MAP for each Core_Section separately
 # Change 'Rs_annual' column as necessary to match the respiration data you are plotting
