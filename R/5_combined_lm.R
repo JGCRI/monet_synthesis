@@ -1,4 +1,4 @@
-
+library(ggpmisc)
 
 ### Step 1: Prepare Monet Weighted Rs Index
 rs_index_results <- combined_monet %>%
@@ -31,7 +31,7 @@ converted_srdb <- combined_data %>%
   ) %>%
   na.omit() %>%
   filter(MAT > 8 & MAT < 16.5 & MAP > 200 & MAP < 1230) %>% #filtering to climate range of MONet
-  slice_sample(n = 16) %>% #same sample size as MONet
+  slice_sample(n = 64) %>% #4x MONet sample size
   mutate(
     respiration_rate = Rs_daily_mg_per_g_soil,
     source = "SRDB"
@@ -41,19 +41,26 @@ converted_srdb <- combined_data %>%
 ### Step 3: Combine the Two Dataframes
 combined_data_for_model <- bind_rows(converted_srdb, rs_index_results)
 
+cd4m <- combined_data_for_model %>%
+  group_by(source) %>%
+  mutate(respiration_z = (respiration_rate - mean(respiration_rate)) / sd(respiration_rate)) %>%
+  ungroup()
+
 ### Step 4: Linear Model Testing
-model <- lm(respiration_rate ~ source + MAT + MAP, data = combined_data_for_model)
-summary(model)
+model1 <- lm(respiration_z ~ source + MAT + MAP, data = cd4m)
+summary(model1)
 
 ### Step 5: Reshape Data and Facetted Plot
-combined_data_for_model %>%
+cd4m %>%
   pivot_longer(cols = c(MAT, MAP), names_to = "climate_parameter", values_to = "climate_value") %>%
-  ggplot(aes(x = climate_value, y = respiration_rate)) +
+  ggplot(aes(x = climate_value, y = respiration_z)) +
   geom_point(aes(color = source), alpha = 0.7, size = 3) + # Scatter plot
-  geom_smooth(method = "lm", se = FALSE, color = "black") + # Regression line
-  facet_grid(source ~ climate_parameter, scales = "free") + # Facet by source and climate_parameter
+  geom_smooth(method = "lm", se = FALSE, aes(color = source)) + # Regression line
+  facet_wrap(climate_parameter ~ ., scales = "free_x") + # Facet by source and climate_parameter
   stat_poly_eq(
-    aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")),
+    aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~"),
+        group = source,
+        color = source),
     formula = y ~ x,
     parse = TRUE,
     size = 3
@@ -61,7 +68,32 @@ combined_data_for_model %>%
   labs(
     title = "Rs vs Climate by Data Source",
     x = "Climate Parameter",
-    y = "Respiration Rate (mg C per g soil per day)"
+    y = "Z-score Respiration Rate (mg C per g soil per day)"
+  ) +
+  scale_color_manual(values = c("SRDB" = "#0072B2", "MONet" = "#D55E00")) +
+  theme_minimal()
+
+model2 <- lm(respiration_rate ~ source + MAT + MAP, data = cd4m)
+summary(model2)
+
+cd4m %>%
+  pivot_longer(cols = c(MAT, MAP), names_to = "climate_parameter", values_to = "climate_value") %>%
+  ggplot(aes(x = climate_value, y = respiration_rate)) +
+  geom_point(aes(color = source), alpha = 0.7, size = 3) + # Scatter plot
+  geom_smooth(method = "lm", se = FALSE, aes(color = source)) + # Regression line
+  facet_wrap(source ~ climate_parameter, scales = "free") + # Facet by source and climate_parameter
+  stat_poly_eq(
+    aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~"),
+        group = source,
+        color = source),
+    formula = y ~ x,
+    parse = TRUE,
+    size = 3
+  ) + # Regression equation and R²
+  labs(
+    title = "Rs vs Climate by Data Source",
+    x = "Climate Parameter",
+    y = "NOTE VARIABLE SCALE \n Respiration Rate (mg C per g soil per day)"
   ) +
   scale_color_manual(values = c("SRDB" = "#0072B2", "MONet" = "#D55E00")) +
   theme_minimal()
