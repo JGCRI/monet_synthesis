@@ -33,7 +33,7 @@ The **MONet Data Synthesis Project** aims to systematically compare and integrat
 | `data/`           | Directory for storing raw and publicly available datasets.                                       |
 | `scripts/`        | R Markdown scripts for data collection and processing		                               |
 | `figures/`        | Directory for saving plots and visual outputs from the analyses.                                 |
-|`MONetSynthesis.Rmd| R markdown file containing analysis of MONet data product.				       |
+|`MONetSynthesis.Rmd`| R markdown file containing analysis of MONet data product.				       |
 | `README.md`       | Overview of the repository, datasets, and instructions for reproducing the analyses.             |
 
 ---
