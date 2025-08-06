@@ -7,6 +7,7 @@
 # This script is designed to download and process the data needed for comparing
 # MONet data to SoilGrids and SRDB.
 
+# Load the packages
 library(dplyr)
 library(tidyr)
 library(ggplot2)
@@ -17,7 +18,6 @@ library(tidyterra)
 library(raster)
 library(tiff)
 library(geodata)
-# Load the packages
 library(httr)
 library(utils)
 library(gdalUtilities)
