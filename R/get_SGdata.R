@@ -53,24 +53,46 @@ igh='+proj=igh +lat_0=0 +lon_0=0 +datum=WGS84 +units=m +no_defs'
 # this is retrieving the mean variable of interest for surface soil
 # many other data types are available
 
-# pH
+# pH 0-5cm
 gdal_translate(paste0(sg_url,'phh2o/phh2o_0-5cm_mean.vrt'), # ph * 10
-               "./crop_roi_igh_ph.tif",
+               "./data/soilgrids/crop_roi_igh_ph_0-5cm.tif",
                tr=c(250,250),
                projwin=bb,
                projwin_srs =igh)
 
-ph_rst = rast("./crop_roi_igh_ph.tif")
+ph_rst = rast("./data/soilgrids/crop_roi_igh_ph_0-5cm.tif")
 plot(ph_rst/10) # ph units
 hist(ph_rst/10)
 
-# clay
-gdal_translate(paste0(sg_url,'clay/clay_0-5cm_mean.vrt'), #g/kg
-               "./crop_roi_igh_clay.tif",
+# pH 15-30cm
+gdal_translate(paste0(sg_url,'phh2o/phh2o_15-30cm_mean.vrt'), # ph * 10
+               "./data/soilgrids/crop_roi_igh_ph_15-30cm.tif",
                tr=c(250,250),
                projwin=bb,
                projwin_srs =igh)
 
-clay_rst = rast("./crop_roi_igh_clay.tif")
+ph_rst = rast("./data/soilgrids/crop_roi_igh_ph_15-30cm.tif")
+plot(ph_rst/10) # ph units
+hist(ph_rst/10)
+
+# clay 0-5cm
+gdal_translate(paste0(sg_url,'clay/clay_0-5cm_mean.vrt'), #g/kg
+               "./data/soilgrids/crop_roi_igh_clay_0-5cm.tif",
+               tr=c(250,250),
+               projwin=bb,
+               projwin_srs =igh)
+
+clay_rst = rast("./data/soilgrids/crop_roi_igh_clay_0-5cm.tif")
+plot(clay_rst/10) #g/100g ie., %
+hist(clay_rst/10)
+
+# clay 15-30cm
+gdal_translate(paste0(sg_url,'clay/clay_15-30cm_mean.vrt'), #g/kg
+               "./data/soilgrids/crop_roi_igh_clay_15-30cm.tif",
+               tr=c(250,250),
+               projwin=bb,
+               projwin_srs =igh)
+
+clay_rst = rast("./data/soilgrids/crop_roi_igh_clay_15-30cm.tif")
 plot(clay_rst/10) #g/100g ie., %
 hist(clay_rst/10)
