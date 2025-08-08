@@ -52,16 +52,31 @@ library(raster)
 library(tiff)
 library(geodata)
 library(devtools)
+library(BIOMEplot)
 
-install_github("kunstler/BIOMEplot")
+#install_github("kunstler/BIOMEplot")
 
 ```
 Set up color palette for plotting
-```{r}
+```{r graph colors, results = "hide"}
 
 myColors <- c( "#000080","#4040A0","#8080C0", "#D6AA80", "#D98040", "#CC5500")
 names(myColors) <- c("MONet_resp", "MONet_pH", "MONet_clay",
                      "comp_clay", "comp_pH", "comp_resp")
+
+```
+
+## Load Data (this can take a few minutes)
+
+```{r Processed Data}
+
+load("processed_data.Rdata")
+
+if(!"processed_data.Rdata" %in% list.files()){
+    print("Generate processed MONet data by sourcing MONetDataPreprocessing.R") #does this stop if she's not there?
+} else {
+    print("Processed data loaded, cheers!")
+  }
 
 ```
 
@@ -354,14 +369,27 @@ rs_index_results <- combined_monet %>%
   ) %>%
   dplyr::select(respiration_rate, MAT, MAP, source)
 
+srdb %>%
+  dplyr::select(Rs_annual, Record_number) -> srdb_slim
+
+# Rename the 'place' column in srdb_data$annual to match 'Record_number' in srdb_slim
+srdb_annual <- srdb_data$annual %>%
+  rename(Record_number = place)
+
+# Combine datasets by 'Record_number'
+combined_SRDB <- srdb_slim %>%
+  inner_join(srdb_annual, by = "Record_number")
+
 #convert
 set.seed(42)
-converted_srdb <- combined_data %>%
+converted_srdb <- combined_SRDB %>%
   mutate(
-    Rs_daily_mg_per_g_soil = 1000 * (Rs_annual / (1.25 * 10 * 10000 * 365)) # Conversion formula
+    Rs_daily_mg_per_g_soil = 1000 * (Rs_annual / (1.25 * 10 * 10000 * 365))
+    # Conversion formula
   ) %>%
   na.omit() %>%
-  filter(MAT > 8 & MAT < 16.5 & MAP > 200 & MAP < 1230) %>% #filtering to climate range of MONet
+  filter(MAT > 8 & MAT < 16.5 & MAP > 200 & MAP < 1230) %>%
+  #filtering to climate range of MONet
   slice_sample(n = 64) %>% #4x MONet sample size
   mutate(
     respiration_rate = Rs_daily_mg_per_g_soil,
@@ -435,28 +463,6 @@ cd4m %>%
 
 # pH and Clay Comparison between MONet and Soilgrids
 
-## Load in MONet and Soilgrids data
-
-```{r}
-
-#remove?
-
-# Load in processed data from download_and_preprocessing.R
-load("processed_data.Rdata")
-
-if(!"processed_data.Rdata" %in% list.files()){
-  
-  print("Load processed MONet data by running MONetDataPreprocessing.R")
- 
-} else {
-  
-  load("processed_data.Rdata")
-  
-}
-
-```
-
-
 ## Extract Köppen Climate Zones for MONet data
 
 This section loads a shapefile of the Köppen Climate Zones of North America, filters the climate zone shapefile to CONUS, and extracts the climate region for each data site location in the MONet and 1000 soils experiments. All spatial data are transformed into the target CRS to ensure accuracy.
@@ -468,6 +474,10 @@ If your data directory is missing the file below, download and move into the "da
 ## Load in North American Climate Zones
 
 ```{r load climate, warning=FALSE, message=FALSE, cache = TRUE, fig.dim=c(6,4), fig.align='center'}
+
+# Disable S2 processing to use GEOS for spatial operations
+sf_use_s2(FALSE)
+
 # Load the shapefile as an `sf` object
 climate_zones_sf <- st_read("data/shapefiles/na_climatezones_shapefile/climatezones_shapefile/NA_ClimateZones/data/North_America_Climate_Zones.shp")%>%
   st_transform(crs(conus_valid))
@@ -501,23 +511,25 @@ ggplot() +
 
 ```{r plot pH and clay, fig.dim=c(6,9), fig.align='center', cache = TRUE, include = FALSE}
 
-pH_zones%>%
-  mutate(Experiment = as.factor(if_else(source == "MONet", "MONet_pH", "comp_pH")))%>%
-  ggplot()+
-  geom_boxplot(aes(x = pH, y = Climate, fill = Experiment))+
-  labs(title = "MONet and 1000 soils pH Distributiton\n by Climate Zone")+
-  theme_bw()+
-  scale_fill_manual(name = "Experiment", values = myColors, labels = c("comp_pH" = "1000s", "MONet_pH" = "MONet"))+
-  scale_y_discrete(labels = label_wrap_gen(30))
-  
-clay_zones%>%
-  mutate(Experiment = as.factor(if_else(source == "MONet", "MONet_clay", "comp_clay")))%>%
-  ggplot()+
-  geom_boxplot(aes(x = Clay_percent, y = Climate, fill = Experiment))+
-  labs(title = "MONet and 1000 Soils Clay Content\n by Climate Zone")+
-  theme_bw()+
-  scale_fill_manual(name = "Experiment", values = myColors, labels = c("comp_clay" = "1000s", "MONet_clay" = "MONet"))+
-  scale_y_discrete(labels = label_wrap_gen(30))
+#remove? subsetted by MONet and 1000S
+
+# pH_zones%>%
+#   mutate(Experiment = as.factor(if_else(source == "MONet", "MONet_pH", "comp_pH")))%>%
+#   ggplot()+
+#   geom_boxplot(aes(x = pH, y = Climate, fill = Experiment))+
+#   labs(title = "MONet and 1000 soils pH Distributiton\n by Climate Zone")+
+#   theme_bw()+
+#   scale_fill_manual(name = "Experiment", values = myColors, labels = c("comp_pH" = "1000s", "MONet_pH" = "MONet"))+
+#   scale_y_discrete(labels = label_wrap_gen(30))
+#   
+# clay_zones%>%
+#   mutate(Experiment = as.factor(if_else(source == "MONet", "MONet_clay", "comp_clay")))%>%
+#   ggplot()+
+#   geom_boxplot(aes(x = Clay_percent, y = Climate, fill = Experiment))+
+#   labs(title = "MONet and 1000 Soils Clay Content\n by Climate Zone")+
+#   theme_bw()+
+#   scale_fill_manual(name = "Experiment", values = myColors, labels = c("comp_clay" = "1000s", "MONet_clay" = "MONet"))+
+#   scale_y_discrete(labels = label_wrap_gen(30))
   
 ```
 
@@ -525,7 +537,8 @@ clay_zones%>%
 
 ```{r soilGrids data, warning=FALSE, message=FALSE}
 
-#remove?
+#move up
+#adjust messages
 
 # if soilgrid data has already been processed and saved to .RData, load in RData
 if(!"sg_data.RData" %in% list.files()){
@@ -626,7 +639,7 @@ ggarrange(clay_top, clay_bottom, nrow = 2, ncol = 1)
 
 ```
 
-```{r 1-to-1 comparison pH, fig.dim = c(8,8)}
+```{r 1-to-1 comparison pH, fig.dim = c(8,8), fig.align='center', cache = TRUE}
 pH_top_1v1_comp <- sg_pH_monet_top_values%>%
   rename(MONet_pH = "pH", comp_pH = "crop_roi_igh_ph_0.5cm")%>%
   dplyr::select(MONet_pH, comp_pH)%>%
@@ -657,7 +670,7 @@ ggarrange(pH_top, pH_bottom, nrow = 2, ncol = 1)
 
 ```
 
-```{r bind MONet and soilgrids data, echo=FALSE, warning=FALSE, message=FALSE}
+```{r bind MONet and soilgrids data, echo=FALSE, warning=FALSE, message=FALSE, cache = TRUE, cache.lazy=FALSE}
 process_soil_data <- function(type, section, MONet_df, sg_df, climate_mapping_df, sg_column_name) {
   # Process MONet data
   MONet_data <- MONet_df %>%
@@ -731,7 +744,7 @@ The following MONet sites were excluded from the following analysis since there 
 
 For each region with more than one MONet site, 1,000 observations of Soilgrids data were randomly sampled to illustrate the distribution of pH and clay content in each climate zone.
 
-```{r plot comparisons across zones}
+```{r plot comparisons across zones, echo=FALSE, warning=FALSE, message=FALSE, cache = TRUE}
 # Boxplots of MONet and Soilgrids comparison by climate region
 
 process_plot_data <- function(soil_data, n_samples = 1000){
@@ -785,7 +798,7 @@ site_locations <- pH_zones%>%
 
 ```
 
-```{r plot comparisons, fig.dim=c(10,10)}
+```{r plot comparisons, fig.dim=c(10,10), echo=FALSE, warning=FALSE, message=FALSE, cache = TRUE}
 
 generate_violin_plots <- function(plot_data, value_col, source_mapping, title, x_label){
   plot_data%>%
@@ -838,7 +851,7 @@ generate_violin_plots(plot_data = plot_pH_btm,
 
 ## Randomly sample soilgrids points at same frequency of MONet sites for each climate zone
 
-```{r random sample plottting, fig.dim=c(10,10) }
+```{r random sample plottting, fig.dim=c(10,10), echo=FALSE, warning=FALSE, message=FALSE, cache = TRUE }
 
 sample_sizes_sg_top <- plot_clay_top %>%
    as.data.frame()%>%
@@ -934,7 +947,7 @@ pH_samples%>%
 
 ```
 
-```{r Plot histograms, fig.dim=c(8,6), fig.align='center'}
+```{r Plot histograms, fig.dim=c(8,6), fig.align='center', echo=FALSE, warning=FALSE, message=FALSE, cache = TRUE, cache.lazy = FALSE}
 
 clay_top <- clay_MONet_sg_top%>%
   mutate(Experiment = as.factor(if_else(source == "MONet", "MONet_clay", "comp_clay")))%>%
@@ -994,7 +1007,7 @@ ggarrange(pH_top, pH_btm, nrow = 2, ncol = 1)
 
 # 3. Spatial Comparison of Clay Content
 
-```{r Spatial comparison, fig.dim = c(8,8), fig.align='center'}
+```{r Spatial comparison, fig.dim = c(8,8), fig.align='center', echo=FALSE, warning=FALSE, message=FALSE, cache = TRUE, cache.lazy = FALSE}
 
 
 #TODO remove once new r_data generated
