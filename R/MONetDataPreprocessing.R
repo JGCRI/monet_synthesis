@@ -171,12 +171,6 @@ SRDB_coords <- srdb %>%
   st_transform(target_crs) %>%
   {.[rowSums(st_within(., conus_valid, sparse = FALSE)) > 0, ]}
 
-# Convert rs_coord to sf assuming the column names are 'Long' and 'Lat'
-monet_rs_coords <- rs_coord %>%
-  filter(Site_Code != "PUUM") %>% #Take out one
-  st_as_sf(coords = c("Long", "Lat"), crs = 4326) %>%
-  st_transform(target_crs)
-
 # Load the shapefile as an `sf` object
 climate_zones_sf <- st_read("data/shapefiles/na_climatezones_shapefile/climatezones_shapefile/NA_ClimateZones/data/North_America_Climate_Zones.shp")%>%
   st_transform(crs(conus_valid))
@@ -203,10 +197,6 @@ monet_clay_coord <- read.csv("data/MONet/clay/processed_data/Coordinates.csv")
 
 monet_pH_data <- read.csv("data/MONet/pH/processed_data/Soil_BioChemical_properties.csv")
 monet_clay_data <- read.csv("data/MONet/clay/processed_data/Soil_BioChemical_properties.csv")
-
-# 1000soil coordinates and data
-processed_1000s <- read.csv("data/MONet/1000S_processed_L2_summary.csv")
-metadata_1000s <- read.csv("data/MONet/1000Soils_Metadata_Site_Mastersheet_v1.csv")
 
 ## Join pH and clay site locations to data and combine MONet and 1000 soils-----
 
@@ -238,9 +228,9 @@ monet_clay_loc <- monet_clay_data%>%
   mutate(source = "MONet")
 
 # Join 1000 soil sample data and location
-processed_1000s_loc <- processed_1000s%>%
+processed_1000s_loc <- monet_rs%>%
   separate(Sampling_Set, into = c("prj", "Site_Code"))%>%
-  left_join(metadata_1000s, by = c("Site_Code"))%>%
+  left_join(rs_coord, by = c("Site_Code"))%>%
   filter(!is.na(Lat))%>%
   mutate(source = "1000s", sample = paste0(prj, "_", Site_Code))%>%
   # format to MONet structure
@@ -287,57 +277,77 @@ clay_zones <- st_join(clay_loc_sf, climate_zones_conus_sf)%>%
 # to extract the soilgrids data by their appropriate climate zone.
 
 # if soilgrid data has already been processed and saved to .RData, load in RData
+read_project_mask <- function(raster_path, conus_valid){
+  raster <- rast(raster_path)
+
+  prj_raster <- raster%>%
+    project(crs(conus_valid))
+
+  prj_raster_mask <- raster::mask(prj_raster, conus_valid)
+
+  return(prj_raster_mask)
+}
+
+extract_buffer <- function(raster, point_data, buffer_size_m){
+  sf_use_s2(TRUE)
+
+  buffer_points <- st_buffer(sf_transform_xy(point_data,
+                                             source_crs = point_data,
+                                             target_crs = point_data), units::set_units(1000, meters))
+
+  sf_use_s2(FALSE)
+
+  extract_buffer_region <- raster::extract(raster, buffer_points,
+                                           fun = function(x) list(mean = mean(x/10, na.rm = TRUE),
+                                                                  count = length(x[!is.na(x)]),
+                                                                  sd = sd(x/10, na.rm = TRUE)),
+                                           bind = TRUE)%>%data.frame()
+
+  names(extract_buffer_region)[(ncol(extract_buffer_region)-2):ncol(extract_buffer_region)] <- c("sg_mean", "sg_count", "sg_sd")
+
+  extract_buffer_region[c("sg_mean", "sg_count", "sg_sd")] <- lapply(extract_buffer_region[c("sg_mean", "sg_count", "sg_sd")], as.numeric)
+
+  return(extract_buffer_region)
+}
+
 if(!"sg_data.RData" %in% list.files()){
 
-  # Clay content soil grids rastes
-  sg_clay_0_5cm <- rast("./data/soilgrids/crop_roi_igh_clay_0-5cm.tif")
-  sg_clay_15_30cm <- rast("./data/soilgrids/crop_roi_igh_clay_15-30cm.tif")
+  # Read in an projects soil grids clay and pH rasters to WGS 1984 (time intensive) and mask to CONUS
+  sg_clay_conus_top <- read_project_mask("./data/soilgrids/crop_roi_igh_clay_0-5cm.tif", conus_valid)
+  sg_clay_conus_btm <- read_project_mask("./data/soilgrids/crop_roi_igh_clay_15-30cm.tif", conus_valid)
 
-  # pH soil grid rasters
-  sg_pH_0_5cm <- rast("./data/soilgrids/crop_roi_igh_ph_0-5cm.tif")
-  sg_pH_15_30cm <- rast("./data/soilgrids/crop_roi_igh_ph_15-30cm.tif")
+  sg_pH_conus_top <- read_project_mask("./data/soilgrids/crop_roi_igh_ph_0-5cm.tif", conus_valid)
+  sg_pH_conus_btm <- read_project_mask("./data/soilgrids/crop_roi_igh_ph_15-30cm.tif", conus_valid)
 
-  # Projects soil grids clay and pH rasters to WGS 1984 (time intensive)
-  # Clay projections
-  sg_clay_top_prj <- sg_clay_0_5cm%>%
-    project(crs(climate_zones_sf))
-  sg_clay_btm_prj <- sg_clay_15_30cm%>%
-    project(crs(climate_zones_sf))
+  # Creates buffer region around points and extracts sg raster values from within
+  sg_clay_buffer_top <- extract_buffer(sg_clay_conus_top, clay_loc_sf_top, buffer_size_m = 1000)
+  sg_clay_buffer_btm <- extract_buffer(sg_clay_conus_btm, clay_loc_sf_btm, buffer_size_m = 1000)
 
-  # pH projections
-  sg_pH_top_prj <- sg_pH_0_5cm%>%
-    project(crs(climate_zones_sf))
-  sg_pH_btm_prj <- sg_pH_15_30cm%>%
-    project(crs(climate_zones_sf))
+  sg_pH_buffer_top <- extract_buffer(sg_pH_conus_top, pH_loc_sf_top, buffer_size_m = 1000)
+  sg_pH_buffer_btm <- extract_buffer(sg_pH_conus_btm, pH_loc_sf_btm, buffer_size_m = 1000)
 
-  # remove unneeded data
-  rm(sg_clay_0_5cm, sg_clay_15_30cm, sg_pH_0_5cm, sg_pH_15_30cm)
-
-  # Mask soil grids data to CONUS
-  sg_clay_conus_top <- raster::mask(sg_clay_top_prj, conus_valid)
-  sg_clay_conus_btm <- raster::mask(sg_clay_btm_prj, conus_valid)
-
-  sg_pH_conus_top <- raster::mask(sg_pH_top_prj, conus_valid)
-  sg_pH_conus_btm <- raster::mask(sg_pH_btm_prj, conus_valid)
+  # Binds top and bottom samples
+  sg_clay_buffer <- rbind(sg_clay_buffer_top, sg_clay_buffer_btm)
+  sg_pH_buffer <- rbind(sg_pH_buffer_top, sg_pH_buffer_btm)
 
   # Extracts soil grids clay and pH data from the MONet site locations
   # Values are divided by 10
 
   # Clay
-  sg_clay_monet_top <- terra::extract(sg_clay_top_prj, clay_loc_sf_top, fun=mean, bind=TRUE)
+  sg_clay_monet_top <- terra::extract(sg_clay_conus_top, clay_loc_sf_top, fun=mean, bind=TRUE)
   sg_clay_monet_top_values <- values(sg_clay_monet_top)%>%
     mutate(crop_roi_igh_clay_0.5cm = crop_roi_igh_clay_0.5cm/10)
 
-  sg_clay_monet_btm <- terra::extract(sg_clay_btm_prj, clay_loc_sf_btm, fun=mean, bind=TRUE)
+  sg_clay_monet_btm <- terra::extract(sg_clay_conus_btm, clay_loc_sf_btm, fun=mean, bind=TRUE)
   sg_clay_monet_btm_values <- values(sg_clay_monet_btm)%>%
     mutate(crop_roi_igh_clay_15.30cm = crop_roi_igh_clay_15.30cm/10)
 
   # pH
-  sg_pH_monet_top <- terra::extract(sg_pH_top_prj, pH_loc_sf_top, fun=mean, na.rm=TRUE, bind=TRUE)
+  sg_pH_monet_top <- terra::extract(sg_pH_conus_top, pH_loc_sf_top, fun=mean, na.rm=TRUE, bind=TRUE)
   sg_pH_monet_top_values <- values(sg_pH_monet_top)%>%
     mutate(crop_roi_igh_ph_0.5cm = crop_roi_igh_ph_0.5cm/10)
 
-  sg_pH_monet_btm <- terra::extract(sg_pH_btm_prj, pH_loc_sf_btm, fun=mean, na.rm=TRUE, bind=TRUE)
+  sg_pH_monet_btm <- terra::extract(sg_pH_conus_btm, pH_loc_sf_btm, fun=mean, na.rm=TRUE, bind=TRUE)
   sg_pH_monet_btm_values <- values(sg_pH_monet_btm)%>%
     mutate(crop_roi_igh_ph_15.30cm = crop_roi_igh_ph_15.30cm/10)
 
@@ -392,6 +402,7 @@ if(!"sg_data.RData" %in% list.files()){
   pH_btm_long <- soilgrids_by_zone(sg_pH_conus_btm, climate_zones_conus_sf)
 
   save(#sg_clay_conus_top, sg_clay_conus_btm, # for spatial comparison
+       sg_clay_buffer, sg_pH_buffer,
        clay_top_long, clay_btm_long, # for entire SG comparison
        pH_top_long, pH_btm_long,
        sg_clay_monet_top_values, sg_clay_monet_btm_values, # 1 to 1 comparison
@@ -403,9 +414,29 @@ if(!"sg_data.RData" %in% list.files()){
 
 }
 
+# Read in soil respiration raster, clip to conus, and extract buffered regions around MONet points
+soil_Rh_conus <- read_project_mask("./data/SoilResp_HeterotrophicResp_1928/data/soil_Rh_mean.tif", conus_valid)
+
+monet_rs_combined <- monet_rs%>%
+  mutate(
+    Site_Code = sapply(strsplit(Sample_Name, "_"), `[`, 3),
+    Core_Section = sapply(strsplit(Sample_Name, "_"), `[`, 4)
+  )%>%
+  left_join(rs_coord, by = c("Site_Code"))%>%
+  select(Sample_Name, respiration_ppm_co2_c, respiration_mg_co2_c_g_soil_day_24hour,
+         respiration_mg_co2_c_g_soil_day_96hour,
+         Site_Code, Core_Section, Lat, Long)%>%
+  filter(Site_Code != "PUUM", !is.na(Long), !is.na(Lat)) %>% #Take out one
+  st_as_sf(coords = c("Long", "Lat"), crs = 4326) %>%
+  st_transform(target_crs)
+
+soil_Rh_buffer <-  extract_buffer(soil_Rh_conus, monet_rs_combined, 1000)
+
 # Output is broken up into two smaller Rdata files for easier loading
 # Save tables for synthesis
-save(pH_zones, clay_zones, clay_loc_sf_top, clay_loc_sf_btm,
-     climate_zone_mapping, clay_top_long, clay_btm_long, file = "processed_data.Rdata")
+save(pH_zones, clay_zones,
+     clay_loc_sf_top, clay_loc_sf_btm,
+     climate_zone_mapping, soil_Rh_buffer,
+     file = "processed_data.Rdata")
 
 
