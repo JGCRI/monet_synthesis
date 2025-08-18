@@ -616,8 +616,8 @@ sg_clay_top_prj <- terra::rast("sg_clay_top_prj.tif")
 ggplot()+
   tidyterra::geom_spatraster(data = sg_clay_top_prj)+
   geom_sf(data = conus_valid, color = "grey", alpha = 0.5)+
-  geom_sf(data = top_clay_test, color = "black", size = 3.5)+
-  geom_sf(data = top_clay_test, aes(color=Site_Code), size = 3)+
+  geom_sf(data = missing_clay, color = "black", size = 3.5)+
+  geom_sf(data = missing_clay, aes(color=Site_Code), size = 3)+
   coord_sf(xlim = c(-78,-74),ylim = c(38,41))+
   theme_bw()+
   scale_fill_gradient(low = 'white', high = 'blue', na.value=NA)+
