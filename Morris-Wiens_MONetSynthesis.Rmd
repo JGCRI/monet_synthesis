@@ -604,19 +604,20 @@ monet_clay_missing <- rbind(sg_clay_monet_top_values%>%
   mutate(missing = TRUE)
   
 
-top_clay_test <- clay_loc_sf_top%>%
+missing_clay <- clay_loc_sf_top%>%
   left_join(monet_clay_missing, by = c("core_section", "Clay_percent", "source", "sample"))%>%
   filter(missing == TRUE)%>%
     separate(sample, into = c("prj", "Site_Code"))%>%
     left_join(metadata_1000s, by = c("Site_Code"))
   
+sg_clay_top_prj <- terra::rast("sg_clay_top_prj.tif") 
 
-
+#To DO: replace/overlay site codes with sample counts
 ggplot()+
   tidyterra::geom_spatraster(data = sg_clay_top_prj)+
-  geom_sf(data = conus_valid, color = "grey", alpha = 0.3)+
-  geom_sf(data = top_clay_test, color = "black", size = 5)+
-  geom_sf(data = top_clay_test, aes(color=Site_Code), size =4, alpha = 0.8)+
+  geom_sf(data = conus_valid, color = "grey", alpha = 0.5)+
+  geom_sf(data = top_clay_test, color = "black", size = 3.5)+
+  geom_sf(data = top_clay_test, aes(color=Site_Code), size = 3)+
   coord_sf(xlim = c(-78,-74),ylim = c(38,41))+
   theme_bw()+
   scale_fill_gradient(low = 'white', high = 'blue', na.value=NA)+
