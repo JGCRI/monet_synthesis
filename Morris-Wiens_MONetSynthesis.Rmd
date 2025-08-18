@@ -237,15 +237,27 @@ pH_MONet_sg_btm <- process_soil_data(
   sg_column_name = "crop_roi_igh_ph_15.30cm"
 )
 
-pH_samples <- sg_random_sample(pH_MONet_sg_top, sample_sizes_sg_top, seeds = c(1, 5, 10))
+sample_sizes_pH_top <- pH_MONet_sg_top %>%
+   as.data.frame()%>%
+   dplyr::select(Climate, source)%>%
+   group_by(Climate, source) %>%
+   summarise(n = n())%>%
+   pivot_wider(names_from = "source", values_from = "n")%>%
+   filter(MONet > 1)%>%
+   mutate(soilGrids = MONet)%>%
+   mutate(axis_label = paste0(Climate, "\n", "MONet = ", MONet, ", Soilgrids = ", soilGrids))
 
+pH_samples <- sg_random_sample(pH_MONet_sg_top, sample_sizes_pH_top, seeds = c(1, 5, 10))
+
+sample_colors <- c("#8080C0", "#D6AA80", "#D98040", "#CC5500")
 names(sample_colors) <- unique(pH_samples$source)
 
 pH_samples%>%
-   mutate(Experiment = as.factor(if_else(source == "MONet", "MONet_clay", source)))%>%
-   left_join(sample_sizes_sg_top, by = c("Climate"))%>%
+   mutate(Experiment = as.factor(if_else(source == "MONet", "MONet_pH", source)))%>%
+   left_join(sample_sizes_pH_top, by = c("Climate"))%>%
    filter(!is.na(axis_label))%>%
-   ggplot(aes(x = pH, y = axis_label, fill = source, color = source)) +
+   ggplot(aes(x = pH, y = axis_label,
+              fill = source, color = source)) +
       geom_violin(alpha = 0.7, 
                   position = position_dodge(width = 0.8),
                   scale = "width") +  # Equal widths regardless of sample size
@@ -253,17 +265,14 @@ pH_samples%>%
                    position = position_dodge(width = 0.8),
                    outlier.shape = NA)+
       theme_bw()+
-   # scale_fill_manual(name = "Experiment", values = myColors, labels = c("comp_clay" = "Soilgrids", "MONet_clay" = "MONet"))+
-   # scale_color_manual(name = "Experiment", values = myColors, labels = c("comp_clay" = "Soilgrids", "MONet_clay" = "MONet"))+
    labs(
      title = "MONet and Soilgrids pH by Climate Zone",
      x = "pH",
      y = "Climate Zone"
    )+
   scale_y_discrete(labels = label_wrap_gen(30))+
-  scale_fill_manual(name = "Experiment", values = sample_colors)+
-  scale_color_manual(name = "Experiment", values = sample_colors)
-
+  scale_fill_manual(name = "Date Source", values = sample_colors)+
+  scale_color_manual(name = "Data Source", values = sample_colors)
 
 ```
 
@@ -417,67 +426,6 @@ $$\text{mg C g⁻¹ soil day⁻¹} = \left( \frac{\text{g C m² yr⁻¹} \times 
 
 For a detailed explanation of assumptions and the conversion process see `SRDB_to_mgC_gSoil_day.txt`
 
-```{r SRDB MAP and MAT relationship, cache = TRUE, include = TRUE}
-
-##
-###
-####
-# REMOVE?
-###
-##
-#
-
-# Select annual respiration from SRDB dadta
-srdb %>%
-  dplyr::select(Rs_annual, Record_number) -> srdb_slim
-
-# Rename the 'place' column in srdb_data$annual to match 'Record_number' in srdb_slim
-srdb_annual <- srdb_data$annual %>%
-  rename(Record_number = place)
-
-# Combine datasets by 'Record_number'
-SRDB_data <- srdb_slim %>%
-  inner_join(srdb_annual, by = "Record_number")
-
-#TODO Rs conversion here
-# Convert Rs from Rs annual to mgC/gSoil/day
-bulk_density_g_cm2 <- 1.85
-effective_soil_depth_cm <- 10
-
-conversion_factor = 1000 * (1/(365 * bulk_density_g_cm2 * 10^5))
-
-SRDB_mg_co2_c_g_soil_day <- SRDB_data%>%
-  mutate(Rs_mg_co2_g_24h = Rs_annual * conversion_factor)
-
-
-# Linear regression model to test the effect of MAP and MAT on Rs_annual
-SRDB_model <- lm(Rs_annual ~ MAP + MAT, data = SRDB_mg_co2_c_g_soil_day)
-summary(SRDB_model)
-
-# Print regression summary
-print(summary(SRDB_model))
-
-# Plot Rs_annual vs MAP
-plot_MAP <- ggplot(SRDB_mg_co2_c_g_soil_day, aes(x = MAP, y = Rs_mg_co2_g_24h)) +
-  geom_point(color = myColors["comp_resp"], alpha = 0.5) +
-  geom_smooth(method = "lm", col = "blue") +
-  labs(title = "Effect of MAP on Rs (mg_co2_g_24h)",
-       x = "Mean Annual Precipitation (MAP)",
-       y = "Annual Soil Respiration (Rs_annual)") +
-  theme_bw()+
-  theme(axis.title.y = element_text(size = 7))
-
-# Plot Rs_annual vs MAT
-plot_MAT <- ggplot(SRDB_mg_co2_c_g_soil_day, aes(x = MAT, y = Rs_mg_co2_g_24h)) +
-  geom_point(color = myColors["comp_resp"], alpha = 0.5) +
-  geom_smooth(method = "lm", col = "red") +
-  labs(title = "Effect of MAT on Rs (mg_co2_g_24h)",
-       x = "Mean Annual Temperature (MAT)",
-       y = "Annual Soil Respiration (Rs_annual)") +
-  theme_bw()+
-  theme(axis.title.y = element_text(size = 7))
-
-```
 
 ## Identify relationship between soil respiration in MONet to MAP and MAT
 
@@ -562,7 +510,7 @@ converted_srdb <- combined_SRDB %>%
   na.omit() %>%
   filter(MAT > 8 & MAT < 16.5 & MAP > 200 & MAP < 1230) %>%
   #filtering to climate range of MONet
-  slice_sample(n = 64) %>% #4x MONet sample size
+  slice_sample(n = 32) %>% #2x MONet sample size
   mutate(
     respiration_rate = Rs_daily_mg_per_g_soil,
     source = "SRDB"
@@ -646,16 +594,6 @@ This analysis identified 6 MONet sample sites in locations with incomplete data 
 -   Winters Lane Upper Soil Pit (Philadelphia, PA)
 
 ```{r MONet not in Soilgrids, fig.dim=c(6,5), fig.align='center', cache = TRUE}
- # Clay content soil grids rasters
-sg_clay_0_5cm <- rast("./data/soilgrids/crop_roi_igh_clay_0-5cm.tif")
-
-sg_clay_top_prj <- sg_clay_0_5cm%>%
-    project(crs(climate_zones_sf))
-   
-sg_clay_15_30cm <- rast("./data/soilgrids/crop_roi_igh_clay_15-30cm.tif")
-
-sg_clay_btm_prj <- sg_clay_15_30cm%>%
-    project(crs(climate_zones_sf))
 
 monet_clay_missing <- rbind(sg_clay_monet_top_values%>%
                               filter(is.na(crop_roi_igh_clay_0.5cm))%>%
@@ -675,7 +613,7 @@ top_clay_test <- clay_loc_sf_top%>%
 
 
 ggplot()+
-  tidyterra::geom_spatraster(data = sg_clay_top_prj/10)+
+  tidyterra::geom_spatraster(data = sg_clay_top_prj)+
   geom_sf(data = conus_valid, color = "grey", alpha = 0.3)+
   geom_sf(data = top_clay_test, color = "black", size = 5)+
   geom_sf(data = top_clay_test, aes(color=Site_Code), size =4, alpha = 0.8)+
