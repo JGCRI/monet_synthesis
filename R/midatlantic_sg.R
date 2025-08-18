@@ -18,12 +18,14 @@ sg_clay_top_prj <- terra::project(sg_clay_top_prj_final, target_crs) # Reproject
 # Step 3: Apply transformation
 sg_clay_top_prj <- sg_clay_top_prj / 10  # Scale raster values as needed
 
+#terra::writeRaster(sg_clay_top_prj, "sg_clay_top_prj.tif", overwrite = TRUE)
+
 # Step 4: Plot with ggplot
 ggplot() +
   tidyterra::geom_spatraster(data = sg_clay_top_prj) +
   geom_sf(data = conus_valid, color = "grey", alpha = 0.3) +
-  geom_sf(data = top_clay_test, color = "black", size = 5) +
-  geom_sf(data = top_clay_test, aes(color = Site_Code), size = 3.5, alpha = 0.8) +
+  geom_sf(data = top_clay_test, color = "black", size = 4) +
+  geom_sf(data = top_clay_test, aes(color = Site_Code), size = 4) +
   coord_sf(xlim = c(-78, -74.5), ylim = c(38.25, 40.5)) +
   theme_bw() +
   scale_fill_gradient(low = "white", high = "blue", na.value = NA) +
