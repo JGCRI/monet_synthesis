@@ -8,9 +8,11 @@
 # User-specific files
 .Ruserdata
 *.png
+
 Morris-Wiens_MONetSynthesis.html
-sg_data.Rdata
-/data/
+
+/data/*
+/R_data/*
 
 # Example code in package build process
 *-Ex.R
