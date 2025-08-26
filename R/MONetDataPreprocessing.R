@@ -286,9 +286,6 @@ clay_zones <- st_join(clay_loc_sf, climate_zones_conus_sf)%>%
 # the location of each MONet sample site. The second function of this chunk is
 # to extract the soilgrids data by their appropriate climate zone.
 
-# if soilgrid data has already been processed and saved to .RData, load in RData
-if(!"sg_data.RData" %in% list.files()){
-
   # Clay content soil grids rastes
   sg_clay_0_5cm <- rast("./data/soilgrids/crop_roi_igh_clay_0-5cm.tif")
   sg_clay_15_30cm <- rast("./data/soilgrids/crop_roi_igh_clay_15-30cm.tif")
@@ -391,22 +388,20 @@ if(!"sg_data.RData" %in% list.files()){
   pH_top_long <- soilgrids_by_zone(sg_pH_conus_top, climate_zones_conus_sf)
   pH_btm_long <- soilgrids_by_zone(sg_pH_conus_btm, climate_zones_conus_sf)
 
-  save(sg_clay_conus_top, sg_clay_conus_btm, # for spatial comparison
-       clay_top_long, clay_btm_long, # for entire SG comparison
-       sg_clay_top_prj, # to plot missing SG values
-       pH_top_long, pH_btm_long,
-       sg_clay_monet_top_values, sg_clay_monet_btm_values, # 1 to 1 comparison
-       sg_pH_monet_top_values,sg_pH_monet_btm_values,
-       file = "sg_data.RData")
-} else {
-
-  load("sg_data.RData")
-
-}
 
 # Output is broken up into two smaller Rdata files for easier loading
-# Save tables for synthesis
-save(pH_zones, clay_zones, clay_loc_sf_top, clay_loc_sf_btm,
-     climate_zone_mapping, clay_top_long, clay_btm_long, file = "processed_data.Rdata")
+
+save(sg_clay_conus_top, sg_clay_conus_btm, # for spatial comparison
+       sg_clay_top_prj, # to plot missing SG values
+       sg_clay_monet_top_values, sg_clay_monet_btm_values, # 1 to 1 comparison
+       sg_pH_monet_top_values,sg_pH_monet_btm_values,
+       file = "R_data/sg_data.RData")
+
+save(pH_zones, clay_zones,
+     climate_zone_mapping,
+     clay_loc_sf_top, clay_loc_sf_btm,
+     pH_top_long, pH_btm_long,
+     clay_top_long, clay_btm_long,
+     file = "R_data/processed_data.Rdata")
 
 
