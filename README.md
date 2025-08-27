@@ -49,6 +49,7 @@ This project integrates multiple high-quality datasets. A summary of their sourc
 | MONet Clay and pH       | Clay content and pH of X number of soil samples in the United States                                               | [MONet](https://sc-data.emsl.pnnl.gov/monet)
 | SoilGrids               | Global gridded clay content and pH at 10km resolution.                         					| [SoilGrids](https://soilgrids.org/)                                                                                 |
 | SRDB                    | Soil respiration observations aggregated from published journal articles globally.                                  | [SRDB GitHub Repository](https://github.com/bpbond/srdb)                                                            |
+| Global Gridded 1-km Rh  | Soil heterotrophic respiration upsacled globally at 1-km reslution.          | [NASA Earthdata](https://www.earthdata.nasa.gov/data/catalog/ornl-cloud-soilresp-heterotrophicresp-1928-1)                                                            |
 | Climate Zones           | Koppen-Geiger classification shapefile used for grouping comparisons by climatic similarities.                     | [North American Climate Atlas](https://www.cec.org/north-american-environmental-atlas/climate-zones-of-north-america) |
 | USA Shapefiles          | Spatial reference shapefiles for delineating site boundaries in the continental U.S.                               | [NOAA GIS US States Shapefiles](https://www.weather.gov/gis/USStates)                                               |
 
