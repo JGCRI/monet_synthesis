@@ -1,3 +1,4 @@
+
 library(dplyr)
 library(tidyr)
 library(sf)
@@ -90,7 +91,7 @@ monet_pH_loc <- monet_pH_data%>%
   mutate(source = "MONet")
 
 # Join 1000 soil sample data and location
-processed_1000s_loc <- processed_1000s%>%
+processed_1000s_loc <- monet_rs %>%
   separate(Sampling_Set, into = c("prj", "Site_Code"))%>%
   left_join(metadata_1000s, by = c("Site_Code"))%>%
   filter(!is.na(Lat))%>%
@@ -255,7 +256,7 @@ monet_rs_coords <- combined_monet %>%
 
 # Soil Rh -------------------------
 
-soil_Rh_conus <- read_and_project("./data/SoilResp_HeterotrophicResp_1928/data/soil_Rh_mean.tif", conus_valid)
+soil_Rh_conus <- read_project_mask("./data/srdb/soil_Rh_mean.tif", conus_valid)
 soil_Rh_buffer <-  extract_buffer(soil_Rh_conus, monet_rs_coords, 1000)
 
 soil_Rh_buffer%>%
