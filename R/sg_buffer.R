@@ -255,7 +255,7 @@ monet_rs_coords <- combined_monet %>%
 
 # Soil Rh -------------------------
 
-soil_Rh_conus <- read_and_project("./data/SoilResp_HeterotrophicResp_1928/data/soil_Rh_mean.tif", conus_valid)
+soil_Rh_conus <- read_project_mask("./data/SoilResp_HeterotrophicResp_1928/data/soil_Rh_mean.tif", conus_valid)
 soil_Rh_buffer <-  extract_buffer(soil_Rh_conus, monet_rs_coords, 1000)
 
 soil_Rh_buffer%>%

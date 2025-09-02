@@ -67,43 +67,51 @@ names(myColors) <- c("MONet_resp", "MONet_pH", "MONet_clay",
 
 ### Load Pre-processed Data 1 of 2 (this can take a few minutes)
 
-```{r Processed data, warning=FALSE, message=FALSE}
+```{r Rs data, warning=FALSE, message=FALSE}
 
-#TODO change this and the next chunk so that they stop if the files aren't there
-
-load("R_data/processed_data.Rdata")
-
-if(!"processed_data.Rdata" %in% list.files("R_data/")){
-    print("Generate processed MONet data by sourcing MONetDataPreprocessing.R")
+if(!"processed_Rs.RData" %in% list.files("R_data/")){
+    print("Generate processed Rs data by sourcing MONetDataPreprocessing.R")
 } else {
-    print("Processed data loaded, cheers!")
-  }
+  
+    load("R_data/processed_Rs.RData")
 
-#not used
-rm("pH_zones", "clay_zones", "clay_loc_sf_btm",
-   "climate_zone_mapping", "pH_top_long", "pH_btm_long",
-   "clay_top_long", "clay_btm_long")
+    print("Rs loaded, cheers!")
+  }
 
 ```
 
-### Load Pre-processed Data 2 of 2 (ditto)
+### Load Pre-processed Data 2 of 3 (ditto)
 
-```{r soilGrids data, warning=FALSE, message=FALSE}
+```{r clay data, warning=FALSE, message=FALSE}
 
-load("R_data/sg_data.Rdata")
-
-if(!"sg_data.RData" %in% list.files("R_data/")){
+if(!"processed_clay.RData" %in% list.files("R_data/")){
   
-  print("Generate processed SoilGrids data by sourcing MONetDataPreprocessing.R")
+  print("Generate processed clay data by sourcing MONetDataPreprocessing.R")
  
 } else {
-  print("SoilGrids data loaded, cheers!")
+  
+  load("R_data/processed_clay.RData")
+
+  print("Clay data loaded, cheers!")
 }
 
-#not used
-rm("sg_clay_conus_btm",
-   "sg_pH_monet_top_values",
-   "sg_pH_monet_btm_values")
+
+```
+### Load Pre-processed Data 3 of 3 (ditto)
+
+```{r pH data, warning=FALSE, message=FALSE}
+
+
+if(!"processed_pH.RData" %in% list.files("R_data/")){
+  
+  print("Generate processed pH data by sourcing MONetDataPreprocessing.R")
+ 
+} else {
+  
+  load("R_data/processed_pH.RData")
+
+  print("pH data loaded, cheers!")
+}
 
 ```
 
@@ -226,8 +234,8 @@ process_soil_data <- function(type, section, MONet_df, sg_df, climate_mapping_df
 ```
  
 ```{r plot pH, fig.dim=c(6,9), fig.align='center', include = FALSE}
-
-load("R_data/combined_data.Rdata")
+# 
+# load("R_data/combined_data.Rdata")
 
 sample_sizes_pH_top <- pH_MONet_sg_top %>%
    as.data.frame()%>%
@@ -293,7 +301,6 @@ If your data directory is missing any of the files below, download them from the
 monet_rs <- read.csv("data/MONet/1000S_processed_L2_summary.csv")
 srdb <- read.csv("data/srdb/srdb-20250503a/srdb-data.csv")
 
-
 # Define the target CRS from the shapefile
 target_crs <- st_crs(conus_valid)
 
@@ -307,7 +314,6 @@ SRDB_coords <- srdb %>%
   st_as_sf(coords = c("Longitude", "Latitude"), crs = 4326) %>%
   st_transform(target_crs) %>%
   {.[rowSums(st_within(., conus_valid, sparse = FALSE)) > 0, ]}
-
 
 # Plotting both sets of coordinates
 ggplot() +
@@ -596,11 +602,16 @@ missing_clay <- clay_loc_sf_top%>%
     separate(sample, into = c("prj", "Site_Code"))%>%
     left_join(metadata_1000s, by = c("Site_Code"))
   
-sg_clay_top_prj <- terra::rast("R_data/sg_clay_top_prj.tif") 
+sg_clay_conus_top <- terra::rast("R_data/sg_clay_conus_top.tif") 
+
+crop_extent <- terra::ext(-78, -74.5, 38.25, 40.5) # Define crop extent
+sg_clay_top_prj_final <- terra::crop(sg_clay_conus_top, crop_extent)  # Crop raster to extent
+#TODO is reprojection necessary 
+#sg_clay_top_prj <- terra::project(sg_clay_top_prj_final, target_crs)
 
 #To DO: replace/overlay site codes with sample counts
 ggplot()+
-  tidyterra::geom_spatraster(data = sg_clay_top_prj)+
+  tidyterra::geom_spatraster(data = sg_clay_top_prj_final)+
   geom_sf(data = conus_valid, color = "grey", alpha = 0.5)+
   geom_sf(data = missing_clay, color = "black", size = 3.5)+
   geom_sf(data = missing_clay, aes(color=Site_Code), size = 3)+
@@ -634,7 +645,7 @@ For each region with more than one MONet site, 1,000 observations of Soilgrids d
 ```{r plot comparisons across zones, echo=FALSE, warning=FALSE, message=FALSE, cache = TRUE}
 # Boxplots of MONet and Soilgrids comparison by climate region
 
-load("R_data/violin_data.Rdata")
+# load("R_data/violin_data.Rdata")
 
 ```
 
@@ -796,12 +807,12 @@ rm(pH_samples)
 
 
 #TODO remove once new r_data generated
-sg_clay_conus_top <- terra::project(sg_clay_top_prj, conus_valid)%>%project(crs(conus_valid))
+#sg_clay_conus_top <- terra::project(sg_clay_top_prj, conus_valid)%>%project(crs(conus_valid))
 # sg_clay_conus_btm <- raster::mask(sg_clay_btm_prj, conus_valid)%>%project(crs(conus_valid))
 
-#p1 <- 
-  ggplot()+
-  tidyterra::geom_spatraster(data = sg_clay_conus_top/10) +
+
+ggplot()+
+  tidyterra::geom_spatraster(data = sg_clay_conus_top) +
   geom_sf(data = conus_valid, color = "black", alpha = 0.3)+
   geom_sf(data = clay_loc_sf_top, aes(fill = Clay_percent), colour = "black", size =3)+
   geom_sf(data = clay_loc_sf_top, aes(color = Clay_percent), size =2)+
@@ -829,3 +840,63 @@ sg_clay_conus_top <- terra::project(sg_clay_top_prj, conus_valid)%>%project(crs(
 # ggarrange(p1, p2, nrow = 2, ncol = 1)
 
 ```
+![Spatial Comparison of MONet and GCAM Clay.](graphs/MONet_GCAM_plot.png)
+
+```{r Additional plots}
+MONet_GCAM_clay%>%
+  mutate(ymin = gcam_q1_value,
+         ymax = gcam_q3_value)%>%
+  ggplot(aes(x = Clay_percent_mean , y = gcam_average , color = glu_nm, shape = core_section))+
+  geom_point()+
+  geom_errorbar(aes(x = Clay_percent_mean , ymin = ymin, ymax = ymax ), alpha = 0.5)+
+  geom_errorbar(aes(x = gcam_average , xmin = Clay_percent_mean - monet_sd, xmax = Clay_percent_mean + monet_sd), alpha = 0.5)+
+  geom_abline(intercept = 0, slope = 1, color = "black")+
+  stat_smooth(formula = y~x,method = "lm", se = TRUE, level = 0.95)+
+  labs(title = "Clay Content GCAM vs MONet by Basin",
+       x = "MONet", y = "GCAM")+
+  theme_bw()
+
+bulk_density_g_cm2 <- 1.85
+effective_soil_depth_cm <- 10
+C_molec_weight_ratio_gCo2_C <- 3.67
+
+conversion_factor = 1000 * (C_molec_weight_ratio_gCo2_C/(365 * bulk_density_g_cm2 * 10^5))
+soil_Rh_buffer%>%
+  mutate(ymin = sg_mean - sg_sd,
+         ymax = sg_mean + sg_sd)%>%
+  ggplot(aes(x = respiration_ppm_co2_c , y = sg_mean * conversion_factor , color = Core_Section, fill = Core_Section))+
+  geom_point()+
+  geom_errorbar(aes(x = respiration_ppm_co2_c , ymin = ymin * conversion_factor, ymax = ymax * conversion_factor))+
+  geom_abline(intercept = 0, slope = 1, color = "black")+
+  stat_smooth(formula = y~x,method = "lm", se = TRUE, level = 0.95)+
+  labs(title = "Rh Upscaled SRDB vs MONet",
+       x = "MONet", y = "Upscaled SRDB")+
+  theme_bw()
+
+sg_pH_buffer%>%
+  mutate(ymin = sg_mean - sg_sd,
+         ymax = sg_mean + sg_sd)%>%
+  ggplot(aes(x = pH, y = sg_mean, color = core_section, fill = core_section))+
+  geom_point()+
+  geom_errorbar(aes(x = pH, ymin = ymin, ymax = ymax))+
+  geom_abline(intercept = 0, slope = 1, color = "black")+
+  stat_smooth(formula = y~x,method = "lm", se = TRUE, level = 0.95)+
+  labs(title = "pH Soilgrids vs MONet",
+       x = "MONet", y = "Soilgrids")+
+  theme_bw()
+
+sg_clay_buffer%>%
+  mutate(ymin = sg_mean - sg_sd,
+         ymax = sg_mean + sg_sd)%>%
+  ggplot(aes(x = Clay_percent, y = sg_mean, color = core_section, fill = core_section))+
+  geom_point()+
+  #geom_path()
+  geom_errorbar(aes(x = Clay_percent, ymin = ymin, ymax = ymax))+
+  geom_abline(intercept = 0, slope = 1, color = "black")+
+  stat_smooth(formula = y~x,method = "lm", se = TRUE, level = 0.95)+
+  labs(title = "Clay Percent Soilgrids vs MONet",
+       x = "MONet", y = "Soilgrids")+
+  theme_bw()
+
+```
+
