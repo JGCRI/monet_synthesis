@@ -709,7 +709,11 @@ generate_violin_plots(plot_data = plot_clay_btm,
 
 
 #TODO remove once new r_data generated
-sg_clay_conus_top <- terra::project(sg_clay_top_prj, conus_valid)%>%project(crs(conus_valid))
+# or is it not possible to read it in from .Rdata without errors?
+  sg_clay_conus_top <- read_project_mask("./data/soilgrids/crop_roi_igh_clay_0-5cm.tif", conus_valid)
+
+#old code
+# sg_clay_conus_top <- terra::project(sg_clay_top_prj, conus_valid)%>%project(crs(conus_valid))
 # sg_clay_conus_btm <- raster::mask(sg_clay_btm_prj, conus_valid)%>%project(crs(conus_valid))
 
 #p1 <- 

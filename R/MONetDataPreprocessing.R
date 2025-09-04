@@ -401,7 +401,7 @@ if(!"sg_data.RData" %in% list.files()){
   pH_top_long <- soilgrids_by_zone(sg_pH_conus_top, climate_zones_conus_sf)
   pH_btm_long <- soilgrids_by_zone(sg_pH_conus_btm, climate_zones_conus_sf)
 
-  save(#sg_clay_conus_top, sg_clay_conus_btm, # for spatial comparison
+  save(sg_clay_conus_top, sg_clay_conus_btm, # for spatial comparison
        sg_clay_buffer, sg_pH_buffer,
        clay_top_long, clay_btm_long, # for entire SG comparison
        pH_top_long, pH_btm_long,
