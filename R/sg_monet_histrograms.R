@@ -117,14 +117,14 @@ pH_btm <- pH_MONet_sg_btm%>%
   )
 
 clay_hist <- ggarrange(clay_top, clay_btm, nrow = 2, ncol = 1)
-ggsave(plot = clay_hist, "clay_hist.png")
-ggsave(plot = clay_top, "clay_top.png")
-ggsave(plot = clay_btm, "clay_btm.png")
+ggsave(plot = clay_hist, "./graphs/clay_hist.png")
+ggsave(plot = clay_top, "./graphs/cclay_top.png")
+ggsave(plot = clay_btm, "./graphs/cclay_btm.png")
 
 pH_hist <- ggarrange(pH_top, pH_btm, nrow = 2, ncol = 1)
-ggsave(plot = pH_hist, "pH_hist.png")
-ggsave(plot = pH_top, "pH_top.png")
-ggsave(plot = pH_btm, "pH_btm.png")
+ggsave(plot = pH_hist, "./graphs/cpH_hist.png")
+ggsave(plot = pH_top, "./graphs/cpH_top.png")
+ggsave(plot = pH_btm, "./graphs/cpH_btm.png")
 
 save(pH_MONet_sg_top,
      clay_MONet_sg_top,

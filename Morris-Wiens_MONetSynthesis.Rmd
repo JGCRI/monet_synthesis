@@ -69,89 +69,53 @@ names(myColors) <- c("MONet_resp", "MONet_pH", "MONet_clay",
 
 ### Load Pre-processed Data 1 of 2 (this can take a few minutes)
 
-```{r Processed data, warning=FALSE, message=FALSE}
+```{r Rs data, warning=FALSE, message=FALSE}
 
-#TODO change this and the next chunk so that they stop if the files aren't there
-
-load("R_data/processed_data.Rdata")
-
-if(!"processed_data.Rdata" %in% list.files("R_data/")){
-    print("Generate processed MONet data by sourcing MONetDataPreprocessing.R")
+if(!"processed_Rs.RData" %in% list.files("R_data/")){
+    print("Generate processed Rs data by sourcing MONetDataPreprocessing.R")
 } else {
-    print("Processed data loaded, cheers!")
+  
+    load("R_data/processed_Rs.RData")
+
+    print("Rs loaded, cheers!")
   }
 
-#not used
-rm("pH_zones", "clay_zones", "clay_loc_sf_btm",
-   "climate_zone_mapping", "pH_top_long", "pH_btm_long",
-   "clay_top_long", "clay_btm_long")
-
 ```
 
-### Load Pre-processed Data 2 of 2 (ditto)
+### Load Pre-processed Data 2 of 3 (ditto)
 
-```{r SoilGrids data, warning=FALSE, message=FALSE}
+```{r clay data, warning=FALSE, message=FALSE}
 
-load("R_data/sg_data.Rdata")
-
-if(!"sg_data.RData" %in% list.files("R_data/")){
+if(!"processed_clay.RData" %in% list.files("R_data/")){
   
-  print("Generate processed SoilGrids data by sourcing MONetDataPreprocessing.R")
+  print("Generate processed clay data by sourcing MONetDataPreprocessing.R")
  
 } else {
-  print("SoilGrids data loaded, cheers!")
+  
+  load("R_data/processed_clay.RData")
+
+  print("Clay data loaded, cheers!")
 }
 
-#not used
-rm("sg_clay_conus_btm",
-   "sg_pH_monet_top_values",
-   "sg_pH_monet_btm_values")
 
 ```
+### Load Pre-processed Data 3 of 3 (ditto)
 
-# 1. Comparison of Soil Respiration relative to MAP and MAT
+```{r pH data, warning=FALSE, message=FALSE}
 
-## Read in MONet respiration and SRDB data
 
-Read in the experiment data and associated sample location files for the MONet and the SRDB soil respiration data and filter for observations located in the Continental United States (CONUS). The target coordinate reference system (CRS) is defined as WGS84 in this chunk and used to ensure spatial consistency through the rest of the markdown. The coordinates of MONet and SRDB locations are plotted for reference.
+if(!"processed_pH.RData" %in% list.files("R_data/")){
+  
+  print("Generate processed pH data by sourcing MONetDataPreprocessing.R")
+ 
+} else {
+  
+  load("R_data/processed_pH.RData")
 
-If your data directory is missing any of the files below, download them from their respective sources into the "data" folder.
+  print("pH data loaded, cheers!")
+}
 
-[MONet soil respiration](https://zenodo.org/records/15328215)
-
-[SRDB](https://github.com/bpbond/srdb)
-
-[United States shapefile](https://www.weather.gov/gis/USStates)
-
-```{r Plot SRDB and MONet data, cache = TRUE, include = FALSE, fig.dim=c(6,4)}
-
-# read in site coordinates and data
-# only the 1000 soils subset of MONet has respiration data currently
-monet_rs <- read.csv("data/MONet/1000S_processed_L2_summary.csv")
-# 1000 soils project metadata
-metadata_monetRs <- read.csv("data/MONet/1000Soils_Metadata_Site_Mastersheet_v1.csv")
-#Soil Respiration Database
-srdb <- read.csv("data/srdb/srdb-20250503a/srdb-data.csv")
-
-# state codes for filtering to CONUS
-state_abbreviations_conus <- c(
-  "AL", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "ID", "IL", "IN", "IA", "KS", "KY",
-  "LA", "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ", "NM", "NY",
-  "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA",
-  "WV", "WI", "WY"
-)
-
-# Read-in and validate CONUS shapefile
-conus_valid <- st_read("data/shapefiles/s_18mr25/s_18mr25.shp") %>%
-  st_make_valid() %>%
-  filter(STATE %in% state_abbreviations_conus) %>%
-  st_transform("WGS84")
-
-# Disable S2 processing to use GEOS for spatial operations
-sf_use_s2(FALSE)
-
-# Define the target CRS (coordinate reference system) from the shapefile
-target_crs <- st_crs(conus_valid)
+```
 
 # Filter SRDB coordinates within shapefile boundaries
 SRDB_coords <- srdb %>%
@@ -168,6 +132,7 @@ monet_rs_coords <- metadata_monetRs %>%
   st_transform(target_crs)
 
 # Plotting both Rs datasets
+
 ggplot() +
   geom_sf(data = conus_valid, fill = NA, color = "gray", linetype = "solid") +
   geom_sf(data = SRDB_coords, aes(color = 'SRDB'), size = 1.8, alpha = 0.7) +
@@ -597,7 +562,19 @@ In general, MONet data does moderately well at capturing the distribution of pH 
 
 ![One to One SoilGrids vs MONet pH.](graphs/pH_OneToOne.png)
 
-
+```{r}
+sg_pH_buffer%>%
+  mutate(ymin = sg_mean - sg_sd,
+         ymax = sg_mean + sg_sd)%>%
+  ggplot(aes(x = pH, y = sg_mean, color = core_section, fill = core_section))+
+  geom_point()+
+  geom_errorbar(aes(x = pH, ymin = ymin, ymax = ymax))+
+  geom_abline(intercept = 0, slope = 1, color = "black")+
+  stat_smooth(formula = y~x,method = "lm", se = TRUE, level = 0.95)+
+  labs(title = "pH Soilgrids vs MONet",
+       x = "MONet", y = "Soilgrids")+
+  theme_bw()
+  ```
 
 # 3. Spatial Comparison of Clay Content
 
@@ -629,11 +606,17 @@ missing_clay <- clay_loc_sf_top%>%
     separate(sample, into = c("prj", "Site_Code"))%>%
     left_join(metadata_monetRs, by = c("Site_Code"))
   
-sg_mini_clay_top_prj <- terra::rast("R_data/sg_mini_clay_top_prj.tif") 
+
+sg_clay_conus_top <- terra::rast("R_data/sg_clay_conus_top.tif") 
+
+crop_extent <- terra::ext(-78, -74.5, 38.25, 40.5) # Define crop extent
+sg_clay_top_prj_final <- terra::crop(sg_clay_conus_top, crop_extent)  # Crop raster to extent
+#TODO is reprojection necessary 
+#sg_clay_top_prj <- terra::project(sg_clay_top_prj_final, target_crs)
 
 #To DO: replace/overlay site codes with sample counts
 ggplot()+
-  tidyterra::geom_spatraster(data = sg_mini_clay_top_prj)+
+  tidyterra::geom_spatraster(data = sg_clay_top_prj_final)+
   geom_sf(data = conus_valid, color = "grey", alpha = 0.5)+
   geom_sf(data = missing_clay, color = "black", size = 3.5)+
   geom_sf(data = missing_clay, aes(color=Site_Code), size = 3)+
@@ -650,6 +633,19 @@ Some text about clay content of soil.
 
 ```{r future home of clay 1:1 plot}
 
+sg_clay_buffer%>%
+  mutate(ymin = sg_mean - sg_sd,
+         ymax = sg_mean + sg_sd)%>%
+  ggplot(aes(x = Clay_percent, y = sg_mean, color = core_section, fill = core_section))+
+  geom_point()+
+  #geom_path()
+  geom_errorbar(aes(x = Clay_percent, ymin = ymin, ymax = ymax))+
+  geom_abline(intercept = 0, slope = 1, color = "black")+
+  stat_smooth(formula = y~x,method = "lm", se = TRUE, level = 0.95)+
+  labs(title = "Clay Percent Soilgrids vs MONet",
+       x = "MONet", y = "Soilgrids")+
+  theme_bw()
+
 #likely will be read in as an image
 
 ```
@@ -661,7 +657,7 @@ Possibly remove?
 ```{r violin plot data, echo=FALSE, warning=FALSE, message=FALSE, cache = TRUE}
 # Boxplots of MONet and Soilgrids comparison by climate region
 
-load("R_data/violin_data.Rdata")
+# load("R_data/violin_data.Rdata")
 
 ```
 
@@ -708,16 +704,7 @@ generate_violin_plots(plot_data = plot_clay_btm,
 ```{r spatial comparison, fig.dim = c(8,8), fig.align='center', echo=FALSE, warning=FALSE, message=FALSE, cache = TRUE, cache.lazy = FALSE}
 
 
-#TODO remove once new r_data generated
-# or is it not possible to read it in from .Rdata without errors?
-  sg_clay_conus_top <- read_project_mask("./data/soilgrids/crop_roi_igh_clay_0-5cm.tif", conus_valid)
-
-#old code
-# sg_clay_conus_top <- terra::project(sg_clay_top_prj, conus_valid)%>%project(crs(conus_valid))
-# sg_clay_conus_btm <- raster::mask(sg_clay_btm_prj, conus_valid)%>%project(crs(conus_valid))
-
-#p1 <- 
-  ggplot()+
+ggplot()+
   tidyterra::geom_spatraster(data = sg_clay_conus_top) +
   geom_sf(data = conus_valid, color = "black", alpha = 0.3)+
   geom_sf(data = clay_loc_sf_top, aes(fill = Clay_percent), colour = "black", size =3)+
@@ -730,24 +717,26 @@ generate_violin_plots(plot_data = plot_clay_btm,
     fill = "% Clay")
 
 
-
-# p2 <- ggplot()+
-#   tidyterra::geom_spatraster(data = sg_clay_conus_btm/10)+
-#   geom_sf(data = conus_valid, color = "black", alpha = 0.3)+
-#   geom_sf(data = clay_loc_sf_btm, aes(fill = Clay_percent), colour = "black", size =3)+
-#   geom_sf(data = clay_loc_sf_btm, aes(color = Clay_percent), size =2)+
-#   theme_bw()+
-#   scale_fill_gradient(low = 'white', high = 'blue', na.value=NA, limits = c(0,85))+
-#   scale_color_gradient(low = 'white', high = 'blue', na.value=NA, limits = c(0,85), guide = "none")+
-#   labs(
-#     title = "Spatial Comparison of MONet Clay Content to Soilgrids (Bottom sample)",
-#     fill = "% Clay")
-# 
-# ggarrange(p1, p2, nrow = 2, ncol = 1)
-
 ```
+
+![Spatial Comparison of MONet and GCAM Clay.](graphs/MONet_GCAM_plot.png)
 
 ## GCAM Clay Comparisons
 
 ```{r future home of GCAM clay figure}
+
+MONet_GCAM_clay%>%
+  mutate(ymin = gcam_q1_value,
+         ymax = gcam_q3_value)%>%
+  ggplot(aes(x = Clay_percent_mean , y = gcam_average , color = glu_nm, shape = core_section))+
+  geom_point()+
+  geom_errorbar(aes(x = Clay_percent_mean , ymin = ymin, ymax = ymax ), alpha = 0.5)+
+  geom_errorbar(aes(x = gcam_average , xmin = Clay_percent_mean - monet_sd, xmax = Clay_percent_mean + monet_sd), alpha = 0.5)+
+  geom_abline(intercept = 0, slope = 1, color = "black")+
+  stat_smooth(formula = y~x,method = "lm", se = TRUE, level = 0.95)+
+  labs(title = "Clay Content GCAM vs MONet by Basin",
+       x = "MONet", y = "GCAM")+
+  theme_bw()
+
 ```
+
