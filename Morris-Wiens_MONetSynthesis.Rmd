@@ -118,6 +118,8 @@ if(!"processed_pH.RData" %in% list.files("R_data/")){
 ```
 
 # Filter SRDB coordinates within shapefile boundaries
+
+```{r SRDB?!}
 SRDB_coords <- srdb %>%
   dplyr::select(Record_number, Latitude, Longitude) %>%
   na.omit() %>%
@@ -574,7 +576,7 @@ sg_pH_buffer%>%
   labs(title = "pH Soilgrids vs MONet",
        x = "MONet", y = "Soilgrids")+
   theme_bw()
-  ```
+```
 
 # 3. Spatial Comparison of Clay Content
 
