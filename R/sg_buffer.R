@@ -1,3 +1,4 @@
+
 library(dplyr)
 library(tidyr)
 library(sf)
@@ -45,10 +46,13 @@ combined_monet <- monet_slim%>%
     Core_Section = sapply(strsplit(Sample_Name, "_"), `[`, 4)
   )%>%
   left_join(metadata_1000s, by = c("Site_Code"))%>%
+
   select(Sample_Name, respiration_ppm_co2_c, respiration_mg_co2_c_g_soil_day_24hour, respiration_mg_co2_c_g_soil_day_96hour,
+
          Site_Code, Core_Section, Lat, Long)
 
 names(combined_monet)
+
 
 # Convert Rs from Rs annual to mgC/gSoil/day
 bulk_density_g_cm2 <- 1.85
@@ -90,6 +94,7 @@ monet_pH_loc <- monet_pH_data%>%
   mutate(source = "MONet")
 
 # Join 1000 soil sample data and location
+
 processed_1000s_loc <- processed_1000s%>%
   separate(Sampling_Set, into = c("prj", "Site_Code"))%>%
   left_join(metadata_1000s, by = c("Site_Code"))%>%
@@ -256,6 +261,7 @@ monet_rs_coords <- combined_monet %>%
 # Soil Rh -------------------------
 
 soil_Rh_conus <- read_project_mask("./data/SoilResp_HeterotrophicResp_1928/data/soil_Rh_mean.tif", conus_valid)
+
 soil_Rh_buffer <-  extract_buffer(soil_Rh_conus, monet_rs_coords, 1000)
 
 soil_Rh_buffer%>%

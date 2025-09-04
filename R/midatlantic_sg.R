@@ -33,4 +33,5 @@ sg_clay_top_prj <- terra::project(sg_clay_top_prj_final, target_crs) # Reproject
 # Step 3: Apply transformation
 sg_clay_top_prj <- sg_clay_top_prj / 10  # Scale raster values as needed
 
+
 terra::writeRaster(sg_clay_top_prj, "./R_data/sg_clay_top_prj.tif", overwrite = TRUE)
