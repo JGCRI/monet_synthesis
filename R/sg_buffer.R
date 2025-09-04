@@ -46,21 +46,12 @@ combined_monet <- monet_slim%>%
     Core_Section = sapply(strsplit(Sample_Name, "_"), `[`, 4)
   )%>%
   left_join(metadata_1000s, by = c("Site_Code"))%>%
-  select(Sample_Name, respiration_ppm_co2_c, respiration_mg_co2_c_g_soil_day_24hour, respiration_mg_co2_c_g_soil_day_96hour,
+  dplyr::select(Sample_Name, respiration_ppm_co2_c, respiration_mg_co2_c_g_soil_day_24hour, respiration_mg_co2_c_g_soil_day_96hour,
          Site_Code, Core_Section, Lat, Long)
 
 names(combined_monet)
 
-# Convert Rs from Rs annual to mgC/gSoil/day
-bulk_density_g_cm2 <- 1.85
-effective_soil_depth_cm <- 10
-C_molec_weight_ratio_gCo2_C <- 3.67
 
-conversion_factor = 1000 * (C_molec_weight_ratio_gCo2_C/(365 * bulk_density_g_cm2 * 10^5))
-
-combined_data_mg_co2_c_g_soil_day <- combined_data%>%
-  mutate(Rs_mg_co2_g_24h = Rs_annual * conversion_factor)
-## Join pH and clay site locations to data and combine MONet and 1000 soils-----
 
 
 # Join MONet clay content sample data and location
