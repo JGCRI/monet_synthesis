@@ -220,7 +220,7 @@ conus_climate_zones_MONet <- ggplot() +
   labs(title = "CONUS Koppen Climate Zones of North America")+
   scale_color_discrete(drop=T)+
   theme(legend.position = "none",
-        plot.title = element_text(size = 18))
+        plot.title = element_text(size = 16))
 
 ggsave(plot = conus_climate_zones_MONet, file = "figures/conus_climate_zones_MONet.png", width = 8, height = 5.0)
 
@@ -782,10 +782,69 @@ clay_random_sample <- clay_samples%>%
 ggsave(plot = pH_random_sample, "./figures/pH_random_sample.png")
 ggsave(plot = clay_random_sample, "./figures/clay_random_sample.png")
 
+# MONet points missing from SoilGrids ------------------------------------------
+
+monet_clay_missing <- rbind(sg_clay_monet_top_values%>%
+                              filter(is.na(crop_roi_igh_clay_0.5cm))%>%
+                              dplyr::select(Clay_percent, source, core_section, sample),
+                            sg_clay_monet_btm_values%>%
+                              filter(is.na(crop_roi_igh_clay_15.30cm))%>%
+                              dplyr::select(Clay_percent, source, core_section, sample))%>%
+  mutate(missing = TRUE)
+
+
+missing_clay <- clay_loc_sf_top%>%
+  left_join(monet_clay_missing, by = c("core_section", "Clay_percent", "source", "sample"))%>%
+  filter(missing == TRUE)%>%
+  separate(sample, into = c("prj", "Site_Code"))%>%
+  left_join(data.frame(monet_rs_coords), by = c("Site_Code"))%>%
+  mutate(location = substr(Site_Code, 1,2))%>%
+  group_by(location)%>%
+  mutate(samples = paste0("n = ", n()))%>%
+  ungroup()
+
+#TODO remove
+# sg_clay_conus_top <- terra::rast("R_data/sg_clay_conus_top.tif")
+# conus_valid <- read_sf("data/shapefiles/conus_valid.shp")
+
+crop_extent <- terra::ext(-78, -74.5, 38.25, 40.5) # Define crop extent
+sg_clay_top_prj_final <- terra::crop(sg_clay_conus_top, crop_extent)  # Crop raster to extent
+
+MONet_missing_from_sg <- ggplot()+
+  tidyterra::geom_spatraster(data = sg_clay_top_prj_final)+
+  geom_sf(data = conus_valid, color = "black", alpha = 0.5)+
+  geom_sf(data = missing_clay, color = "black", size = 3.5)+
+  geom_sf(data = missing_clay, aes(color = Site_Code), size = 3)+
+  geom_sf_label(data = missing_clay, aes(label = samples), nudge_y = 0.01, nudge_x = -.3)+
+  coord_sf(xlim = c(-78,-74.5),ylim = c(38.25,40.5))+
+  theme_bw()+
+  scale_fill_gradient(low = 'white', high = 'blue', na.value=NA)+
+  labs(title = "MONet data points without Soilgrids data")+
+  theme(plot.title = element_text(size = 16))
+
+ggsave(plot = MONet_missing_from_sg, "./figures/MONet_missing_from_sg.png",  width = 8, height = 5.3)
+
+# Spatial Comparison of Clay Percent -------------------------------------------
+
+MONet_sg_clay_map <- ggplot()+
+  tidyterra::geom_spatraster(data = sg_clay_conus_top) +
+  geom_sf(data = conus_valid, color = "black", alpha = 0.3)+
+  geom_sf(data = clay_loc_sf_top, aes(fill = Clay_percent), colour = "black", size =3)+
+  geom_sf(data = clay_loc_sf_top, aes(color = Clay_percent), size =2)+
+  theme_bw()+
+  scale_fill_gradient(low = 'white', high = 'blue', na.value=NA, limits = c(0,85))+
+  scale_color_gradient(low = 'white', high = 'blue', na.value=NA, limits = c(0,85), guide = "none")+
+  labs(
+    title = "Spatial Comparison of MONet Clay Content to Soilgrids (Top sample)",
+    fill = "% Clay")+
+  theme(plot.title = element_text(size = 16),
+        margin(0,0,0,0,unit = "mm"))
+
+ggsave(plot = MONet_sg_clay_map, "./figures/MONet_sg_clay_map.png",  width = 8, height = 3.8)
 
 # Clay comparison GCAM regions -------------------------------------------------
 
-GCAM_clay_content <- read.csv("./from Kanishka_clay/mapped_clay_KN.csv")
+GCAM_clay_content <- read.csv("./data/GCAM/mapped_clay_KN.csv")
 
 GCAM_clay_usa <- GCAM_clay_content%>%
   filter(iso == "usa", c_type == "clay content (0-30 cms)")%>%
@@ -808,7 +867,6 @@ clay_basin_summary <- clay_basins%>%
 
 MONet_GCAM_clay <- clay_basin_summary%>%
   left_join(GCAM_clay_usa, by = c("glu_id" = "glu_code"))
-
 
 GCAM_clay_map <- left_join(conus_basins, GCAM_clay_usa, by = c("glu_id" = "glu_code"))
 

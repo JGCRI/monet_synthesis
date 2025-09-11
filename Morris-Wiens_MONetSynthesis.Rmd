@@ -60,7 +60,6 @@ sf_use_s2(FALSE)
 
 ```
 
-
 ```{r figure colors, results = "hide"}
 
 # Set up color palette for plotting. MONet in shades of blue and various comparisons in oranges
@@ -125,15 +124,17 @@ if(!"processed_pH.RData" %in% list.files("R_data/")){
 
 # 1. Examining Soil Respiration relative to Mean Annual Precipitation and Mean Annual Temperature
 
-Soil respiration (Rs) captures aspects of biological activity in soil over variable time scales. It serves as a critical indicator for microbial processes and carbon fluxes influenced by both environmental gradients and molecular-scale interactions. Soil pH, acts as a proxy for biochemical interactions, particularly with abiotic factors such as soil mineralogy. As a fundamental property of soil chemistry, it provides valuable context for interpreting molecular observations. Clay content is included to represent soil's geological weathering and its impact on structure, water retention, and molecular adsorption. 
+Soil respiration (Rs) captures aspects of biological activity in soil over variable time scales. It serves as a critical indicator for microbial processes and carbon fluxes influenced by both environmental gradients and molecular-scale interactions.
 
-This section compares soil respiration measurements from MONet to the Soil Respiration Database (SRDB v5; Jian et al., 2021) and its associated gridded global \~1km\^2 resolution product (Stell et al., 2021). 
+This section compares soil respiration measurements from MONet to the Soil Respiration Database (SRDB v5; Jian et al., 2021) and its associated gridded global \~1km\^2 resolution product (Stell et al., 2021).
 
-SRDB currently includes a significantly larger number of study sites across the United States compared to MONet. However, MONet is ongoing and this analysis can act as a guide for future sampling calls in order to increase sample representation across regions and soil characteristics. 
+## Sample Sites
+
+SRDB currently includes a significantly larger number of study sites across the United States compared to MONet. However, MONet is ongoing and this analysis can act as a guide for future sampling calls in order to increase sample representation across regions and soil characteristics.
 
 ![SRDB and MONet Rs Sample Sites](./figures/srdb_MONet_conus_sites.png)
 
-### Extract Mean Annual Precipitation (MAP) and Mean Annual Temperature (MAT) for sample coordinates
+## Extract Mean Annual Precipitation (MAP) and Mean Annual Temperature (MAT) for sample coordinates
 
 Using the `geodata` package, \~1km\^2 gridded 10 minute precipitation and average temperature data from 1970-2000 is downloaded and and extracted at the MONet and SRDB sample sites. These data are then used to create timeseries of MAP and MAP for each sample location. A selection of sites are plotted for illustration.
 
@@ -188,8 +189,8 @@ sampled_places_monet <- monet_data$annual %>% distinct(place) %>% sample_n(12)
 sampled_prec_monet <- monet_data$monthly_prec %>% filter(place %in% sampled_places_monet$place)
 sampled_temp_monet <- monet_data$monthly_temp %>% filter(place %in% sampled_places_monet$place)
 
-p_monet_prec <- plot_climatology(sampled_prec_monet, "MAP for MONest subset", "Precipitation", "precipitation")
-p_monet_temp <- plot_climatology(sampled_temp_monet, "MAT for MONest subsets", "Air temperature", "temperature")
+p_monet_prec <- plot_climatology(sampled_prec_monet, "MAP for MONest subset", "Precipitation (mm)", "precipitation")
+p_monet_temp <- plot_climatology(sampled_temp_monet, "MAT for MONest subsets", "Air temperature (C)", "temperature")
 ggarrange(p_monet_prec, p_monet_temp, ncol = 1, common.legend = TRUE, legend = "bottom")
 
 # Process SRDB_coords, subset 18 and plot
@@ -199,13 +200,13 @@ sampled_places_srdb <- srdb_data$annual %>% distinct(place) %>% sample_n(12)
 sampled_prec_srdb <- srdb_data$monthly_prec %>% filter(place %in% sampled_places_srdb$place)
 sampled_temp_srdb <- srdb_data$monthly_temp %>% filter(place %in% sampled_places_srdb$place)
 
-p_srdb_prec <- plot_climatology(sampled_prec_srdb, "MAP for SRDB subset", "Precipitation", "precipitation")
-p_srdb_temp <- plot_climatology(sampled_temp_srdb, "MAT for SRDB subset", "Air temperature", "temperature")
+p_srdb_prec <- plot_climatology(sampled_prec_srdb, "MAP for SRDB subset", "Precipitation (mm)", "precipitation")
+p_srdb_temp <- plot_climatology(sampled_temp_srdb, "MAT for SRDB subset", "Air temperature (C)", "temperature")
 ggarrange(p_srdb_prec, p_srdb_temp, ncol = 1, common.legend = TRUE, legend = "bottom")
 
 ```
 
-#### **SRDB Conversion**
+## **SRDB Conversion**
 
 SRDB soil respiration is converted from annual soil respiration to mg CO2-C / g soil / day using the following assumptions and parameters:
 
@@ -217,9 +218,9 @@ Using the equation:
 
 $$\text{mg C g⁻¹ soil day⁻¹} = \left( \frac{\text{g C m² yr⁻¹}}{1.33 \times 10 \times 10,000} \right) \times \frac{1}{365} \times 1,000$$
 
-#### **MONet Rs Index**
+## **MONet Rs Index**
 
-To represent a single soil respiration data point for each MONet sample core, an index was developed which takes the top and bottom core sample into account as well as the two time points. Given that the majority of biological activity takes place in the top layers of soil, the top sample is weighted greater (65%) than the bottom (35%). After combining top and bottom data for each core, the one and four day respiration rates are given 1/3 and 2/3 weight respectively.
+Each MONet sample core is made up of a top (0cm-10cm) and bottom (20cm-30cm) core section. To represent a single soil respiration data point for each MONet sample core, an index was developed which takes the top and bottom core sample into account as well as the two time points. Given that the majority of biological activity takes place in the top layers of soil, the top sample is weighted greater (65%) than the bottom (35%). After combining top and bottom data for each core, the one and four day respiration rates are given 1/3 and 2/3 weight respectively.
 
 $$\text{Respiration Index} = 0.5 \times \left[ 0.65 \times (\text{24 hr Top} + \text{96 hr Top}) + 0.35 \times (\text{24 hr Bottom} + \text{96 hr Bottom}) \right]$$
 
@@ -270,11 +271,11 @@ monet_rs_index <- combined_monet %>%
 
 ```
 
-
 ## One to One for Rs
 
-Using the gridded version of SRDB, we can directly compare 
+Using the gridded version of SRDB, we can directly compare SRDB Rs to MONet Rs. To do so, a 1000m buffer zone was extracted from the gridded SRDB dataset and the median and standard deviation was calculated in order to create a confidence interval. 
 
+In the figure below, the vertical bars represent the calculated confidence interval of the SRDB Rs and the solid line represents y=x.
 ```{r extract SRDB Rs data, echo = FALSE}
 
 
@@ -294,12 +295,20 @@ soil_Rh_buffer %>%
 
 monet_rs_index$respiration_rate <- monet_rs_index$rs_index
 
+bulk_density = 1.33 #g/cm3
+d = 10 #cm
+area_conv = 10000 #cm^3
+days_per_year = 365 # days in year
+mass_conv = 1000 #mg/g
+
+conversion_factor = 1/(bulk_density*d*area_conv)*1/days_per_year*mass_conv
+
 soil_Rh_buffer %>%
   left_join(monet_rs_index, by =  "Site_Code") %>%
   filter(!is.na(rs_index)) %>%
   distinct(Site_Code, respiration_rate, srdb_count, srdb_sd, srdb_mean, MAP, MAT, source)%>%
   dplyr::select(-"respiration_rate") %>%
-  mutate(respiration_rate = srdb_mean * 2.06e-05) %>%
+  mutate(respiration_rate = srdb_mean * conversion_factor) %>%
   dplyr::select("Site_Code", "respiration_rate",
          "srdb_count", "srdb_sd", "MAT", "MAP") %>%
   mutate(source = "SRDB") -> srdb_ready2_join
@@ -310,9 +319,9 @@ bind_rows(monet_rs_index, srdb_ready2_join) -> rs_combined
 summary_table <- rs_combined %>%
   group_by(source) %>%
   summarize(
-    min_respiration_rate = min(respiration_rate, na.rm = TRUE),
-    max_respiration_rate = max(respiration_rate, na.rm = TRUE),
-    mean_respiration_rate = mean(respiration_rate, na.rm = TRUE)
+    min_respiration_rate = round(min(respiration_rate, na.rm = TRUE),4),
+    max_respiration_rate = round(max(respiration_rate, na.rm = TRUE),4),
+    mean_respiration_rate = round(mean(respiration_rate, na.rm = TRUE),4)
   )%>%
   mutate(Units = "g CO2-C per m2 per yr")
 
@@ -328,7 +337,8 @@ summary_table %>%
 
 ## Impact of MAP and MAT on Soil Respiration by source
 
-```{r Rs Analysis, fig.dim=c(6,4), fig.align='center'}
+The following figure show the relationship of MONet data points and median values of the gridded SRDB from a 1000m buffer around MONet sites. SRDB has a stronger correlation with MAP and MAT, but both MONet and SRDB show a positive relationship. These figures reveal that the current MONet dataset lacks representation of soil samples with MAP of 300-1000 mm/year 
+```{r Rs Analysis, fig.dim=c(6,6), fig.align='center'}
 
 cd4m <- rs_combined %>%
   group_by(source) %>%
@@ -390,8 +400,6 @@ cd4m %>%
 
 ```
 
-
-
 # 2. pH assessemnt within Köppen Climate Zones and directly to SoilGrids
 
 Soil pH, acts as a proxy for biochemical interactions, particularly with abiotic factors such as soil mineralogy and atmospheric chemical deposition. As a fundamental property of soil chemistry, it provides valuable context for interpreting molecular observations. In this section, MONet soil pH measurements are compared to pH estimates from SoilGrids at regional scale by Köppen Climate Zone and by the location of each sample.
@@ -400,30 +408,18 @@ Soil pH, acts as a proxy for biochemical interactions, particularly with abiotic
 
 ![CONUS Köppen Climate Zones of North America](./figures/conus_climate_zones_MONet.png)
 
-
 ## MONet vs SoilGrids density distributions
 
 SoilGrids values are extracted at MONet sampling coordinates to enable direct point-to-point comparisons of pH. The distribution of these points are compared to evaluated ability of direct geographic comparisons.
 
 ![Density distribution of pH data.](./figures/pH_hist.png)
 
-In general, MONet data does moderately well at capturing the distribution of pH seen in SoilGrids.\
+In general, MONet data does moderately well at capturing the distribution of pH seen in SoilGrids. Both distributions peak at around the same pH and variations in the tails of the distribution are likely due to the relatively low sample size of MONet.
 
-![One to One SoilGrids vs MONet pH.](./figures/pH_OneToOne_plot.png)
-When comparing the data sources by MONet sample location, we found that compared to SoilGrids, MONet samples tend to underestimate values at the lower end of the pH range and over estimate at the higher end.
+![One to One SoilGrids vs MONet pH.](./figures/pH_OneToOne_plot.png) 
+As before, the vertical lines on each point represent a confidence interval calculated from SoilGrids pH values within a 1000m buffer around each MONet sample site. When comparing the data sources by MONet sample location, we found that compared to SoilGrids, MONet samples tend to underestimate values at the lower end of the pH range and over estimate at the higher end.
 
-The following MONet sites were excluded from the following analysis since there was only one sample available for the climate zone:
-
--   Anza Borrego Desert State (Hot Desert Climate)\
--   Santa Rita Experimental Range NEON (Hot Semi-Arid Climate)\
--   Northern Great Plains Research Laboratory NEON (Humid Continental Hot Summers with Dry Winters)\
--   Dakota Coteau Field Site NEON (Humid Continental Mild Summer with Dry Winters)\
--   Peterson Farm (Temperate Oceanic Climate)\
--   Beaver Creek, Washington (Warm-Summer Mediterranean Climate)
-
-For each region with more than one MONet site, 1,000 observations of Soilgrids data were randomly sampled to illustrate the distribution of pH and clay content in each climate zone.
-
-## Plot distribution of pH in each region
+## Distribution of pH in each region
 
 ```{r SG functions, include = FALSE}
 
@@ -474,10 +470,9 @@ process_soil_data <- function(type, section, MONet_df, sg_df, climate_mapping_df
 
 ```
 
-We compared the distribution of MONet pH measurements by climate zone to a random sample of the same number of points from each climate zone in SoilGrids. The median pH in the MONet samples was generally within the spread of the of the 25th and 75th confidence intervals of the SoilGrids samples.
+We compared the distribution of MONet pH measurements by climate zone to a random sample of points from each climate zone in SoilGrids where n is the number of MONet sites per region. The median pH in the MONet samples was generally within the spread of the of the 25th and 75th confidence intervals of the SoilGrids samples.
 
 ![Random sampling of SoilGrids vs MONet pH.](./figures/pH_random_sample.png)
-
 
 # 3. Spatial Comparison of Clay Content
 
@@ -492,46 +487,7 @@ This analysis identified 6 MONet sample sites in locations with incomplete data 
 -   Winters Lane Upper Soil Pit (Baltimore, MD)
 -   Urban CZO (Philadelphia, PA)
 
-```{r MONet not in Soilgrids, fig.dim=c(6,5), fig.align='center', cache = TRUE}
-# TODO this is what is also slow( lets move to the preprocessing)
-monet_clay_missing <- rbind(sg_clay_monet_top_values%>%
-                              filter(is.na(crop_roi_igh_clay_0.5cm))%>%
-                              dplyr::select(Clay_percent, source, core_section, sample),
-                            sg_clay_monet_btm_values%>%
-                              filter(is.na(crop_roi_igh_clay_15.30cm))%>%
-                              dplyr::select(Clay_percent, source, core_section, sample))%>%
-  mutate(missing = TRUE)
-
-
-missing_clay <- clay_loc_sf_top%>%
-  left_join(monet_clay_missing, by = c("core_section", "Clay_percent", "source", "sample"))%>%
-  filter(missing == TRUE)%>%
-  separate(sample, into = c("prj", "Site_Code"))%>%
-  left_join(data.frame(monet_rs_coords), by = c("Site_Code"))%>%
-  mutate(location = substr(Site_Code, 1,2))%>%
-  group_by(location)%>%
-  mutate(samples = paste0("n = ", n()))%>%
-  ungroup()
-
-sg_clay_conus_top <- terra::rast("R_data/sg_clay_conus_top.tif")
-conus_valid <- read_sf("data/shapefiles/conus_valid.shp")
-
-crop_extent <- terra::ext(-78, -74.5, 38.25, 40.5) # Define crop extent
-sg_clay_top_prj_final <- terra::crop(sg_clay_conus_top, crop_extent)  # Crop raster to extent
-#TODO is this what is slow?
-# ggplot()+
-#   tidyterra::geom_spatraster(data = sg_clay_top_prj_final)+
-#   geom_sf(data = conus_valid, color = "black", alpha = 0.5)+
-#   geom_sf(data = missing_clay, color = "black", size = 3.5)+
-#   geom_sf(data = missing_clay, aes(color = Site_Code), size = 3)+
-#   geom_sf_label(data = missing_clay, aes(label = samples), nudge_y = 0.01, nudge_x = -.3)+
-#   coord_sf(xlim = c(-78,-74.5),ylim = c(38.25,40.5))+
-#   theme_bw()+
-#   scale_fill_gradient(low = 'white', high = 'blue', na.value=NA)+
-#   labs(title = "MONet data points without Soilgrids data")
-
-
-```
+![Gaps in SoilGrids Data](./figures/MONet_missing_from_sg.png)
 
 ## Clay 1:1
 
@@ -541,12 +497,11 @@ SoilGrids values are extracted at MONet sampling coordinates to enable direct po
 
 ![Density distribution of clay data.](./figures/clay_hist.png)
 
-![One to One SoilGrids vs MONet Clay.](./figures/clay_OneToOne_plot.png)
+![One to One SoilGrids vs MONet Clay.](./figures/clay_OneToOne_plot.png) 
+
 When comparing the data sources by MONet sample location, we found that compared to SoilGrids, MONet samples tend to underestimate values at the lower end of the clay content range and over estimate at the higher end.
 
 ## Clay Content Violins
-
-
 
 ```{r clay violin plots, fig.dim=c(10,10), echo=FALSE, warning=FALSE, message=FALSE, cache = TRUE}
 
@@ -586,33 +541,20 @@ generate_violin_plots(plot_data = plot_clay_btm,
 
 ```
 
+In climate regions with more MONet sample locations the distribution of clay content values tended to better match the distribution of SoilGrids values. Regions with fewer MONet samples tended to skew to one side of the interval.
+
 ## Overlay Map
 
-```{r spatial comparison, fig.dim = c(8,8), fig.align='center', echo=FALSE, warning=FALSE, message=FALSE, cache = TRUE, cache.lazy = FALSE}
+![Spatial Comparison of MONet and SoilGrids](./figures/MONet_sg_clay_map.png)
 
-
-ggplot()+
-  tidyterra::geom_spatraster(data = sg_clay_conus_top) +
-  geom_sf(data = conus_valid, color = "black", alpha = 0.3)+
-  geom_sf(data = clay_loc_sf_top, aes(fill = Clay_percent), colour = "black", size =3)+
-  geom_sf(data = clay_loc_sf_top, aes(color = Clay_percent), size =2)+
-  theme_bw()+
-  scale_fill_gradient(low = 'white', high = 'blue', na.value=NA, limits = c(0,85))+
-  scale_color_gradient(low = 'white', high = 'blue', na.value=NA, limits = c(0,85), guide = "none")+
-  labs(
-    title = "Spatial Comparison of MONet Clay Content to Soilgrids (Top sample)",
-    fill = "% Clay")+
-  theme(plot.title = element_text(size = 12),
-        plot.margin=margin(0,0,0,0, "mm"))
-
-
-```
+Spatially MONet shows promise at representing the distribution of clay content in CONUS.
 
 ![Spatial Comparison of MONet and GCAM Clay.](./figures/MONet_GCAM_plot.png)
 
+GCAM is a dynamic-recursive model with technology-rich representations of the economy, energy sector, land use and water linked to a climate model that can be used to explore climate change mitigation policies including carbon taxes, carbon trading, regulations and accelerated deployment of energy technology. GCAM land use is represented in 232 basin which have clay content derived from SoilGrids. This figure shows a comparison of MONet values to the clay content of the 18 basins that make up CONUS
 ## GCAM Clay Comparisons
 
-```{r future home of GCAM clay figure}
+```{r GCAM clay figure, fig.dim = c(8,5), cache = TRUE}
 MONet_GCAM_clay%>%
   filter(core_section == "TOP")%>%
   mutate(ymin = gcam_q1_value,
@@ -635,3 +577,4 @@ MONet_GCAM_clay%>%
   theme(plot.title = element_text(size = 16))
 
 ```
+Error bars for each point suggest variability and uncertainty in clay content measurements within each basin. The 1:1 line (black) shows where the datasets would perfectly agree, but most points fall below it, indicating that GCAM estimates tend to be higher than MONet values at lower clay contents and lower at higher clay contents.
