@@ -322,11 +322,11 @@ read_project_mask <- function(raster_path, conus_valid){
 
   return(prj_raster_mask)
 }
-# This chunk accomplishes two functions. First it extracts the soilgrids data at
+# This chunk accomplishes two functions. First it extracts the SoilGrids data at
 # the location of each MONet sample site. The second function of this chunk is
-# to extract the soilgrids data by their appropriate climate zone.
+# to extract the SoilGrids data by their appropriate climate zone.
 
-  # Mask soil grids data to CONUS
+  # Mask SoilGrids data to CONUS
   sg_clay_conus_top <- read_project_mask("./data/soilgrids/crop_roi_igh_clay_0-5cm.tif", conus_valid)
   sg_clay_conus_btm <- read_project_mask("./data/soilgrids/crop_roi_igh_clay_15-30cm.tif", conus_valid)
 
@@ -334,7 +334,7 @@ read_project_mask <- function(raster_path, conus_valid){
   sg_pH_conus_btm <- read_project_mask("./data/soilgrids/crop_roi_igh_ph_15-30cm.tif", conus_valid)
 
 
-  # Extracts soil grids clay and pH data from the MONet site locations
+  # Extracts SoilGrids clay and pH data from the MONet site locations
   # Values are divided by 10
 
   # Clay
@@ -431,7 +431,7 @@ process_soil_data <- function(type, section, MONet_df, sg_df, climate_mapping_df
     mutate(source = "SoilGrids",
            !!type := !!sym(type) / 10) # convert units
 
-  # Combine MONet and soilGrids data
+  # Combine MONet and SoilGrids data
   combined_data <- bind_rows(MONet_data, sg_data)
   return(combined_data)
 }
@@ -655,7 +655,7 @@ process_plot_data <- function(soil_data, n_samples = 1000){
     summarise(n = n())%>%
     pivot_wider(names_from = "source", values_from = "n")%>%
     filter(MONet > 1)%>%
-    mutate(axis_label = paste0(Climate, "\n", "MONet = ", MONet, ", SoilGrids = ", SoilGrids)) #TODO object 'soilGrids' not found
+    mutate(axis_label = paste0(Climate, "\n", "MONet = ", MONet, ", SoilGrids = ", SoilGrids)) #TODO object 'SoilGrids' not found
 
   # Join tables
   plot_data_samples <- left_join(plot_data, sample_sizes, by = "Climate")
@@ -803,10 +803,6 @@ missing_clay <- clay_loc_sf_top%>%
   mutate(samples = paste0("n = ", n()))%>%
   ungroup()
 
-#TODO remove
-# sg_clay_conus_top <- terra::rast("R_data/sg_clay_conus_top.tif")
-# conus_valid <- read_sf("data/shapefiles/conus_valid.shp")
-
 crop_extent <- terra::ext(-78, -74.5, 38.25, 40.5) # Define crop extent
 sg_clay_top_prj_final <- terra::crop(sg_clay_conus_top, crop_extent)  # Crop raster to extent
 
@@ -819,7 +815,7 @@ MONet_missing_from_sg <- ggplot()+
   coord_sf(xlim = c(-78,-74.5),ylim = c(38.25,40.5))+
   theme_bw()+
   scale_fill_gradient(low = 'white', high = 'blue', na.value=NA)+
-  labs(title = "MONet data points without Soilgrids data")+
+  labs(title = "MONet data points without SoilGrids data")+
   theme(plot.title = element_text(size = 16))
 
 ggsave(plot = MONet_missing_from_sg, "./figures/MONet_missing_from_sg.png",  width = 8, height = 5.3)
@@ -835,7 +831,7 @@ MONet_sg_clay_map <- ggplot()+
   scale_fill_gradient(low = 'white', high = 'blue', na.value=NA, limits = c(0,85))+
   scale_color_gradient(low = 'white', high = 'blue', na.value=NA, limits = c(0,85), guide = "none")+
   labs(
-    title = "Spatial Comparison of MONet Clay Content to Soilgrids (Top sample)",
+    title = "Spatial Comparison of MONet Clay Content to SoilGrids (Top sample)",
     fill = "% Clay")+
   theme(plot.title = element_text(size = 16),
         margin(0,0,0,0,unit = "mm"))
@@ -844,7 +840,7 @@ ggsave(plot = MONet_sg_clay_map, "./figures/MONet_sg_clay_map.png",  width = 8, 
 
 # Clay comparison GCAM regions -------------------------------------------------
 
-GCAM_clay_content <- read.csv("data/from Kanishka_clay/mapped_clay_KN.csv")
+GCAM_clay_content <- read.csv("data/gcam/mapped_clay_KN.csv")
 
 
 GCAM_clay_usa <- GCAM_clay_content%>%
@@ -853,7 +849,7 @@ GCAM_clay_usa <- GCAM_clay_content%>%
   summarize(gcam_average = mean(weighted_average), gcam_median_value = median(median_value), gcam_min_value = min(min_value), gcam_max_value = max(max_value), gcam_q1_value = mean(q1_value), gcam_q3_value = mean(q3_value))
 
 Sys.setenv(SHAPE_RESTORE_SHX = "YES")
-global_basins <- read_sf("./data/shapefiles/gcam/glu_boundaries_moirai_landcells_3p1_0p5arcmin.shp")
+global_basins <- read_sf("./data/shapefiles/gcam_boundaries_morai_3p1_0p5arcmin_wgs84/main_outputs/glu_boundaries_moirai_landcells_3p1_0p5arcmin.shp")
 
 global_basins <- st_set_crs(global_basins, 4326)
 
@@ -895,12 +891,11 @@ ggsave(plot = MONet_GCAM_plot, "./figures/MONet_GCAM_plot.png", , width = 8, hei
 
 # Write outputs ----------------------------------------------------------------
 
-#TODO remove buffer dataframes
 
 #clay
 save(
   sg_clay_monet_top_values, sg_clay_monet_btm_values,
-  clay_MONet_sg_top, sg_clay_buffer,
+  clay_MONet_sg_top,
   plot_clay_top, plot_clay_btm,
   MONet_GCAM_clay, clay_loc_sf_top,
   file= "R_data/processed_clay.RData"
@@ -908,7 +903,7 @@ save(
 
 #pH
 save(
-  pH_MONet_sg_top, sg_pH_buffer,
+  pH_MONet_sg_top,
   plot_pH_top, plot_pH_btm,
   sg_pH_monet_top_values, sg_pH_monet_btm_values,
   file = "R_data/processed_pH.RData"
@@ -916,7 +911,6 @@ save(
 
 #Rs
 save(
-  soil_Rh_buffer,
   srdb, SRDB_coords, monet_rs,monet_rs_coords,
   plot_pH_top,
   file = "R_data/processed_Rs.RData"
