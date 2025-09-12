@@ -27,7 +27,7 @@ knitr::opts_chunk$set(
 
 # Introduction
 
-This R markdown is designed to be a guide for systematically comparing and integrating MONet soil data with publicly available datasets such as SoilGrids (Hengl et al., 2017) and the Soil Respiration Database (SRDB, Jian et al., 2021). This script executes a series of three comparative and statistical analyses involving 1) soil respiration relative to mean annual precipitation (MAP) and mean annual temperature (MAT), 2) assessments of soil pH within Köppen climatic zones and directly to SoilGrids, 3) and the spatial distribution of soil clay content. Due to differences in the spatial scale of global data products verses a nationally focused effort such as MONet, the response of soil properties to known drivers will be our metric of comparison (Collier et al., 2018; Shao et al., 2013).
+This R markdown is designed to be a guide for comparing and integrating MONet soil data with publicly available datasets such as SoilGrids (Hengl et al., 2017) and the Soil Respiration Database (SRDB, Jian et al., 2021). This script executes a series of three comparative and statistical analyses involving 1) soil respiration relative to mean annual precipitation (MAP) and mean annual temperature (MAT), 2) assessments of soil pH within Köppen climatic zones and directly to SoilGrids, 3) and the spatial distribution of soil clay content. Due to differences in the spatial scale of global data products verses a nationally focused effort such as MONet, the response of soil properties to known drivers will be our metric of comparison (Collier et al., 2018; Shao et al., 2013).
 
 ## Prep our R Environment
 
@@ -107,18 +107,18 @@ if(!"processed_clay.RData" %in% list.files("R_data/")){
 ### Load Pre-processed Data 3 of 3 (ditto)
 
 ```{r pH data, warning=FALSE, message=FALSE}
-
-
-if(!"processed_pH.RData" %in% list.files("R_data/")){
-  
-  print("Generate processed pH data by sourcing MONetDataPreprocessing.R")
- 
-} else {
-  
-  load("R_data/processed_pH.RData")
-
-  print("pH data loaded, cheers!")
-}
+# 
+# 
+# if(!"processed_pH.RData" %in% list.files("R_data/")){
+#   
+#   print("Generate processed pH data by sourcing MONetDataPreprocessing.R")
+#  
+# } else {
+#   
+#   load("R_data/processed_pH.RData")
+# 
+#   print("pH data loaded, cheers!")
+# }
 
 ```
 
@@ -222,7 +222,8 @@ $$\text{mg C g⁻¹ soil day⁻¹} = \left( \frac{\text{g C m² yr⁻¹}}{1.33 \
 
 Each MONet sample core is made up of a top (0cm-10cm) and bottom (20cm-30cm) core section. To represent a single soil respiration data point for each MONet sample core, an index was developed which takes the top and bottom core sample into account as well as the two time points. Given that the majority of biological activity takes place in the top layers of soil, the top sample is weighted greater (65%) than the bottom (35%). After combining top and bottom data for each core, the one and four day respiration rates are given 1/3 and 2/3 weight respectively.
 
-$$\text{Respiration Index} = 0.5 \times \left[ 0.65 \times (\text{24 hr Top} + \text{96 hr Top}) + 0.35 \times (\text{24 hr Bottom} + \text{96 hr Bottom}) \right]$$
+$$  R_{s} \text{ Index}= 0.65 \cdot \left( \frac{1}{3} \cdot R_{s, \text{top, 24 hr}} + \frac{2}{3} \cdot R_{s, \text{top, 96 hr}} \right) 
++ 0.35 \cdot \left( \frac{1}{3} \cdot R_{s, \text{bottom, 24 hr}} + \frac{2}{3} \cdot R_{s, \text{bottom, 96 hr}} \right) $$
 
 ```{r tidy MONet Rs data, include = FALSE}
 
@@ -338,7 +339,7 @@ summary_table %>%
 ## Impact of MAP and MAT on Soil Respiration by source
 
 The following figure show the relationship of MONet data points and median values of the gridded SRDB from a 1000m buffer around MONet sites. SRDB has a stronger correlation with MAP and MAT, but both MONet and SRDB show a positive relationship. These figures reveal that the current MONet dataset lacks representation of soil samples with MAP of 300-1000 mm/year 
-```{r Rs Analysis, fig.dim=c(6,6), fig.align='center'}
+```{r Rs Analysis, fig.dim=c(9,6), fig.align='center'}
 
 cd4m <- rs_combined %>%
   group_by(source) %>%
@@ -543,16 +544,13 @@ generate_violin_plots(plot_data = plot_clay_btm,
 
 In climate regions with more MONet sample locations the distribution of clay content values tended to better match the distribution of SoilGrids values. Regions with fewer MONet samples tended to skew to one side of the interval.
 
-## Overlay Map
-
-![Spatial Comparison of MONet and SoilGrids](./figures/MONet_sg_clay_map.png)
-
-Spatially MONet shows promise at representing the distribution of clay content in CONUS.
+## Applied Science Example: GCAM
 
 ![Spatial Comparison of MONet and GCAM Clay.](./figures/MONet_GCAM_plot.png)
 
-GCAM is a dynamic-recursive model with technology-rich representations of the economy, energy sector, land use and water linked to a climate model that can be used to explore climate change mitigation policies including carbon taxes, carbon trading, regulations and accelerated deployment of energy technology. GCAM land use is represented in 232 basin which have clay content derived from SoilGrids. This figure shows a comparison of MONet values to the clay content of the 18 basins that make up CONUS
-## GCAM Clay Comparisons
+GCAM (Global Change Analysis Model) is a dynamic-recursive model with technology-rich representations of the economy, energy sector, land use and water linked to a climate model that can be used to explore climate change mitigation policies including carbon taxes, carbon trading, regulations and accelerated deployment of energy technology. GCAM land use is represented in 232 basin which have clay content derived from SoilGrids. This figure shows a comparison of MONet values to the clay content of the 18 basins that make up CONUS.  
+
+### GCAM Clay Comparisons
 
 ```{r GCAM clay figure, fig.dim = c(8,5), cache = TRUE}
 MONet_GCAM_clay%>%
@@ -577,4 +575,8 @@ MONet_GCAM_clay%>%
   theme(plot.title = element_text(size = 16))
 
 ```
-Error bars for each point suggest variability and uncertainty in clay content measurements within each basin. The 1:1 line (black) shows where the datasets would perfectly agree, but most points fall below it, indicating that GCAM estimates tend to be higher than MONet values at lower clay contents and lower at higher clay contents.
+Error bars for each point suggest variability and uncertainty in clay content measurements within each basin. The 1:1 line (black) shows where the datasets would perfectly agree, but most points fall below it, indicating that GCAM estimates tend to be higher than MONet values at lower clay contents and lower at higher clay contents.  
+
+# Conclusion  
+
+This markdown has walked through some high-level analysis and comparison of MONet soil data and closely related databases. The code of making any figures that are called here can be found in MONetDataPrepocessing.R. There was so much more to explore than could be easily included in this compact format!  
