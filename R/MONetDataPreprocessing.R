@@ -21,7 +21,7 @@ library(geodata)
 library(httr)
 library(utils)
 library(gdalUtilities)
-
+library(ggpmisc)
 
 
 # 1. Download SRDB from github ----------------------------------------------------
@@ -132,6 +132,11 @@ gdal_translate(paste0(sg_url,'clay/clay_15-30cm_mean.vrt'), #g/kg
 
 # 3. Read in MONet respiration and SRDB data -----------------------------------
 
+
+myColors <- c( "#000080","#4040A0","#8080C0", "#D6AA80", "#D98040", "#CC5500")
+names(myColors) <- c("MONet_resp", "MONet_pH", "MONet_clay",
+                     "comp_clay", "comp_pH", "comp_resp")
+
 # If your data directory is missing any of the files below, download them from
 # their respective sources into the "data" folder.
 
@@ -157,6 +162,8 @@ conus_valid <- st_read("data/shapefiles/s_18mr25/s_18mr25.shp") %>%
   filter(STATE %in% state_abbreviations_conus) %>%
   st_transform("WGS84")
 
+write_sf(conus_valid, "data/shapefiles/conus_valid.shp")
+
 # Define the target CRS from the shapefile
 target_crs <- st_crs(conus_valid)
 
@@ -171,11 +178,26 @@ SRDB_coords <- srdb %>%
   st_transform(target_crs) %>%
   {.[rowSums(st_within(., conus_valid, sparse = FALSE)) > 0, ]}
 
-# Convert rs_coord to sf assuming the column names are 'Long' and 'Lat'
+# Convert coordinates to sf assuming the column names are 'Long' and 'Lat'
 monet_rs_coords <- rs_coord %>%
-  filter(Site_Code != "PUUM") %>% #Take out one
+  filter(Site_Code != "PUUM") %>% #Take out one site in HI
   st_as_sf(coords = c("Long", "Lat"), crs = 4326) %>%
   st_transform(target_crs)
+
+# Plotting both Rs datasets
+
+srdb_MONet_conus_sites <- ggplot() +
+  geom_sf(data = conus_valid, fill = NA, color = "gray", linetype = "solid") +
+  geom_sf(data = SRDB_coords, aes(color = 'SRDB'), size = 1.8, alpha = 0.7) +
+  geom_sf(data = monet_rs_coords, aes(color = 'MONet'), size = 2, alpha = 0.7) +
+  scale_color_manual(values = c('SRDB' = myColors[[6]], 'MONet' = myColors[[1]])) +
+  theme_bw() +
+  labs(title = "Soil Respiration Field Sites",
+       color = "Data Source") +
+  theme(legend.position = "bottom",
+        plot.title = element_text(size = 16))
+
+ggsave(plot = srdb_MONet_conus_sites, file = "./figures/srdb_MONet_conus_sites.png", width = 8, height = 5.3)
 
 # Load the shapefile as an `sf` object
 climate_zones_sf <- st_read("data/shapefiles/na_climatezones_shapefile/climatezones_shapefile/NA_ClimateZones/data/North_America_Climate_Zones.shp")%>%
@@ -188,6 +210,19 @@ climate_zone_mapping <- climate_zones_sf%>%
 # Find intersection of climate zones and CONUS
 climate_zones_conus_sf <- climate_zones_sf%>%
   st_intersection(st_union(conus_valid))
+
+conus_climate_zones_MONet <- ggplot() +
+  geom_sf(data = climate_zones_conus_sf, aes(fill = Climate), color = "darkslategrey", alpha = 1) +
+  geom_sf(data = conus_valid, color = "black", alpha = 0.3)+
+  geom_sf(data = monet_rs_coords, size = 2.5, color = "white") +
+  geom_sf(data = monet_rs_coords, size = 2, color = "#000080") +
+  theme_bw()+
+  labs(title = "CONUS Koppen Climate Zones of North America")+
+  scale_color_discrete(drop=T)+
+  theme(legend.position = "none",
+        plot.title = element_text(size = 16))
+
+ggsave(plot = conus_climate_zones_MONet, file = "figures/conus_climate_zones_MONet.png", width = 8, height = 5.0)
 
 # 4. Reading pH and clay content data from MONet and 1000 soils database -------
 
@@ -203,10 +238,6 @@ monet_clay_coord <- read.csv("data/MONet/clay/processed_data/Coordinates.csv")
 
 monet_pH_data <- read.csv("data/MONet/pH/processed_data/Soil_BioChemical_properties.csv")
 monet_clay_data <- read.csv("data/MONet/clay/processed_data/Soil_BioChemical_properties.csv")
-
-# 1000soil coordinates and data
-processed_1000s <- read.csv("data/MONet/1000S_processed_L2_summary.csv")
-metadata_1000s <- read.csv("data/MONet/1000Soils_Metadata_Site_Mastersheet_v1.csv")
 
 ## Join pH and clay site locations to data and combine MONet and 1000 soils-----
 
@@ -238,9 +269,9 @@ monet_clay_loc <- monet_clay_data%>%
   mutate(source = "MONet")
 
 # Join 1000 soil sample data and location
-processed_1000s_loc <- processed_1000s%>%
+processed_1000s_loc <- monet_rs%>%
   separate(Sampling_Set, into = c("prj", "Site_Code"))%>%
-  left_join(metadata_1000s, by = c("Site_Code"))%>%
+  left_join(rs_coord, by = c("Site_Code"))%>%
   filter(!is.na(Lat))%>%
   mutate(source = "1000s", sample = paste0(prj, "_", Site_Code))%>%
   # format to MONet structure
@@ -281,60 +312,46 @@ clay_zones <- st_join(clay_loc_sf, climate_zones_conus_sf)%>%
   filter(!is.na(Climate))
 
 # Read in soilGrids data and clip to CONUS -------------------------------------
+read_project_mask <- function(raster_path, conus_valid){
+  raster <- rast(raster_path)
 
-# This chunk accomplishes two functions. First it extracts the soilgrids data at
+  prj_raster <- raster%>%
+    project(crs(conus_valid))
+
+  prj_raster_mask <- raster::mask(prj_raster, conus_valid)
+
+  return(prj_raster_mask)
+}
+# This chunk accomplishes two functions. First it extracts the SoilGrids data at
 # the location of each MONet sample site. The second function of this chunk is
-# to extract the soilgrids data by their appropriate climate zone.
+# to extract the SoilGrids data by their appropriate climate zone.
 
-  # Clay content soil grids rastes
-  sg_clay_0_5cm <- rast("./data/soilgrids/crop_roi_igh_clay_0-5cm.tif")
-  sg_clay_15_30cm <- rast("./data/soilgrids/crop_roi_igh_clay_15-30cm.tif")
+  # Mask SoilGrids data to CONUS
+  sg_clay_conus_top <- read_project_mask("./data/soilgrids/crop_roi_igh_clay_0-5cm.tif", conus_valid)
+  sg_clay_conus_btm <- read_project_mask("./data/soilgrids/crop_roi_igh_clay_15-30cm.tif", conus_valid)
 
-  # pH soil grid rasters
-  sg_pH_0_5cm <- rast("./data/soilgrids/crop_roi_igh_ph_0-5cm.tif")
-  sg_pH_15_30cm <- rast("./data/soilgrids/crop_roi_igh_ph_15-30cm.tif")
+  sg_pH_conus_top <- read_project_mask("./data/soilgrids/crop_roi_igh_ph_0-5cm.tif", conus_valid)
+  sg_pH_conus_btm <- read_project_mask("./data/soilgrids/crop_roi_igh_ph_15-30cm.tif", conus_valid)
 
-  # Projects soil grids clay and pH rasters to WGS 1984 (time intensive)
-  # Clay projections
-  sg_clay_top_prj <- sg_clay_0_5cm%>%
-    project(crs(climate_zones_sf))
-  sg_clay_btm_prj <- sg_clay_15_30cm%>%
-    project(crs(climate_zones_sf))
 
-  # pH projections
-  sg_pH_top_prj <- sg_pH_0_5cm%>%
-    project(crs(climate_zones_sf))
-  sg_pH_btm_prj <- sg_pH_15_30cm%>%
-    project(crs(climate_zones_sf))
-
-  # remove unneeded data
-  rm(sg_clay_0_5cm, sg_clay_15_30cm, sg_pH_0_5cm, sg_pH_15_30cm)
-
-  # Mask soil grids data to CONUS
-  sg_clay_conus_top <- raster::mask(sg_clay_top_prj, conus_valid)
-  sg_clay_conus_btm <- raster::mask(sg_clay_btm_prj, conus_valid)
-
-  sg_pH_conus_top <- raster::mask(sg_pH_top_prj, conus_valid)
-  sg_pH_conus_btm <- raster::mask(sg_pH_btm_prj, conus_valid)
-
-  # Extracts soil grids clay and pH data from the MONet site locations
+  # Extracts SoilGrids clay and pH data from the MONet site locations
   # Values are divided by 10
 
   # Clay
-  sg_clay_monet_top <- terra::extract(sg_clay_top_prj, clay_loc_sf_top, fun=mean, bind=TRUE)
+  sg_clay_monet_top <- terra::extract(sg_clay_conus_top, clay_loc_sf_top, fun=mean, bind=TRUE)
   sg_clay_monet_top_values <- values(sg_clay_monet_top)%>%
     mutate(crop_roi_igh_clay_0.5cm = crop_roi_igh_clay_0.5cm/10)
 
-  sg_clay_monet_btm <- terra::extract(sg_clay_btm_prj, clay_loc_sf_btm, fun=mean, bind=TRUE)
+  sg_clay_monet_btm <- terra::extract(sg_clay_conus_btm, clay_loc_sf_btm, fun=mean, bind=TRUE)
   sg_clay_monet_btm_values <- values(sg_clay_monet_btm)%>%
     mutate(crop_roi_igh_clay_15.30cm = crop_roi_igh_clay_15.30cm/10)
 
   # pH
-  sg_pH_monet_top <- terra::extract(sg_pH_top_prj, pH_loc_sf_top, fun=mean, na.rm=TRUE, bind=TRUE)
+  sg_pH_monet_top <- terra::extract(sg_pH_conus_top, pH_loc_sf_top, fun=mean, na.rm=TRUE, bind=TRUE)
   sg_pH_monet_top_values <- values(sg_pH_monet_top)%>%
     mutate(crop_roi_igh_ph_0.5cm = crop_roi_igh_ph_0.5cm/10)
 
-  sg_pH_monet_btm <- terra::extract(sg_pH_btm_prj, pH_loc_sf_btm, fun=mean, na.rm=TRUE, bind=TRUE)
+  sg_pH_monet_btm <- terra::extract(sg_pH_conus_btm, pH_loc_sf_btm, fun=mean, na.rm=TRUE, bind=TRUE)
   sg_pH_monet_btm_values <- values(sg_pH_monet_btm)%>%
     mutate(crop_roi_igh_ph_15.30cm = crop_roi_igh_ph_15.30cm/10)
 
@@ -389,19 +406,516 @@ clay_zones <- st_join(clay_loc_sf, climate_zones_conus_sf)%>%
   pH_btm_long <- soilgrids_by_zone(sg_pH_conus_btm, climate_zones_conus_sf)
 
 
-# Output is broken up into two smaller Rdata files for easier loading
+# For spatial comparisons ------------------------------------------------------
+sg_clay_conus_top_scaled <- sg_clay_conus_top / 10  # Scale raster values as needed
 
-save(sg_clay_conus_top, sg_clay_conus_btm, # for spatial comparison
-       sg_clay_top_prj, # to plot missing SG values
-       sg_clay_monet_top_values, sg_clay_monet_btm_values, # 1 to 1 comparison
-       sg_pH_monet_top_values,sg_pH_monet_btm_values,
-       file = "R_data/sg_data.RData")
+# Save raster as .tif
+terra::writeRaster(sg_clay_conus_top_scaled, "./R_data/sg_clay_conus_top.tif", overwrite = TRUE)
 
-save(pH_zones, clay_zones,
-     climate_zone_mapping,
-     clay_loc_sf_top, clay_loc_sf_btm,
-     pH_top_long, pH_btm_long,
-     clay_top_long, clay_btm_long,
-     file = "R_data/processed_data.Rdata")
+# SoilGrids and MONet Histograms -----------------------------------------------
+
+process_soil_data <- function(type, section, MONet_df, sg_df, climate_mapping_df, sg_column_name) {
+  # Process MONet data
+  MONet_data <- MONet_df %>%
+    left_join(climate_mapping_df, by = c("Climate", "Code")) %>%
+    filter(core_section == section) %>%
+    dplyr::select(Climate, !!type) %>%
+    mutate(source = "MONet")
+
+  # Process SoilGrids data
+  sg_data <- sg_df %>%
+    left_join(climate_mapping_df, by = c("zone" = "Code")) %>%
+    filter(Climate %in% unique(MONet_data$Climate)) %>%
+    rename(!!type := sg_column_name) %>%
+    dplyr::select(Climate, !!type) %>%
+    mutate(source = "SoilGrids",
+           !!type := !!sym(type) / 10) # convert units
+
+  # Combine MONet and SoilGrids data
+  combined_data <- bind_rows(MONet_data, sg_data)
+  return(combined_data)
+}
+
+clay_MONet_sg_top <- process_soil_data(
+  type = "Clay_percent",
+  section = "TOP",
+  MONet_df = clay_zones,
+  sg_df = clay_top_long,
+  climate_mapping_df = climate_zone_mapping,
+  sg_column_name = "crop_roi_igh_clay_0.5cm"
+)
+
+clay_MONet_sg_btm <- process_soil_data(
+  type = "Clay_percent",
+  section = "BTM",
+  MONet_df = clay_zones,
+  sg_df = clay_btm_long,
+  climate_mapping_df = climate_zone_mapping,
+  sg_column_name = "crop_roi_igh_clay_15.30cm"
+)
+
+## Histograms ----
+clay_top <- clay_MONet_sg_top%>%
+  mutate(Experiment = as.factor(if_else(source == "MONet", "MONet_clay", "comp_clay")))%>%
+  ggplot(aes(x = Clay_percent, fill = Experiment))+
+  geom_histogram(mapping = aes(y = after_stat(density)), position = "identity", alpha = 0.7)+
+  theme_bw()+
+  scale_fill_manual(name = "Experiment", values = myColors, labels = c("comp_clay" = "SoilGrids", "MONet_clay" = "MONet"))+
+  labs(
+    title = "SoilGrids and MONet Clay Share Distribution (Top sample)",
+    x = "Clay Content (%)"
+  )
+
+clay_btm <- clay_MONet_sg_btm%>%
+  mutate(Experiment = as.factor(if_else(source == "MONet", "MONet_clay", "comp_clay")))%>%
+  ggplot(aes(x = Clay_percent, fill = Experiment))+
+  geom_histogram(mapping = aes(y = after_stat(density)), position = "identity", alpha = 0.7)+
+  theme_bw()+
+  scale_fill_manual(name = "Experiment", values = myColors, labels = c("comp_clay" = "SoilGrids", "MONet_clay" = "MONet"))+
+  labs(
+    title = "SoilGrids and MONet Clay Share Distribution (Bottom sample)",
+    x = "Clay Content (%)"
+  )
+
+pH_MONet_sg_top <- process_soil_data(
+  type = "pH",
+  section = "TOP",
+  MONet_df = pH_zones,
+  sg_df = pH_top_long,
+  climate_mapping_df = climate_zone_mapping,
+  sg_column_name = "crop_roi_igh_ph_0.5cm"
+)
+
+pH_MONet_sg_btm <- process_soil_data(
+  type = "pH",
+  section = "BTM",
+  MONet_df = pH_zones,
+  sg_df = pH_btm_long,
+  climate_mapping_df = climate_zone_mapping,
+  sg_column_name = "crop_roi_igh_ph_15.30cm"
+)
 
 
+pH_top <- pH_MONet_sg_top%>%
+  mutate(Experiment = as.factor(if_else(source == "MONet", "MONet_pH", "comp_pH")))%>%
+  ggplot(aes(x = pH, fill = Experiment))+
+  geom_histogram(mapping = aes(y = after_stat(density)), position = "identity", alpha = 0.7)+
+  theme_bw()+
+  scale_fill_manual(name = "Experiment", values = myColors, labels = c("comp_pH" = "SoilGrids", "MONet_pH" = "MONet"))+
+  labs(
+    title = "SoilGrids and MONet pH Distribution (Top sample)",
+    x = "pH"
+  )
+
+pH_btm <- pH_MONet_sg_btm%>%
+  mutate(Experiment = as.factor(if_else(source == "MONet", "MONet_pH", "comp_pH")))%>%
+  ggplot(aes(x = pH, fill = Experiment))+
+  geom_histogram(mapping = aes(y = after_stat(density)), position = "identity", alpha = 0.7)+
+  theme_bw()+
+  scale_fill_manual(name = "Experiment", values = myColors, labels = c("comp_pH" = "SoilGrids", "MONet_pH" = "MONet"))+
+  labs(
+    title = "SoilGrids and MONet pH Distribution (Bottom sample)",
+    x = "pH"
+  )
+
+clay_hist <- ggarrange(clay_top, clay_btm, nrow = 2, ncol = 1)
+ggsave(plot = clay_hist, "./figures/clay_hist.png")
+ggsave(plot = clay_top, "./figures/clay_top.png")
+ggsave(plot = clay_btm, "./figures/clay_btm.png")
+
+pH_hist <- ggarrange(pH_top, pH_btm, nrow = 2, ncol = 1)
+ggsave(plot = pH_hist, "./figures/pH_hist.png")
+ggsave(plot = pH_top, "./figures/pH_top.png")
+ggsave(plot = pH_btm, "./figures/pH_btm.png")
+
+
+
+# 1:1 Comparisons Buffer -------------------------------------------------------
+
+extract_buffer <- function(raster, point_data, buffer_size_m, output_cols){
+  sf_use_s2(TRUE)
+
+  # Create buffer region around MONet data points
+  buffer_points <- st_buffer(sf_transform_xy(point_data,
+                                             source_crs = point_data,
+                                             target_crs = point_data), units::set_units(buffer_size_m, meters))
+
+  sf_use_s2(FALSE)
+
+  # Extract data from buffer region from raster data and calculate mean and sd
+  extract_buffer_region <- raster::extract(raster, buffer_points,
+                                           fun = function(x) list(mean = mean(x/10, na.rm = TRUE),
+                                                                  count = length(x[!is.na(x)]),
+                                                                  sd = sd(x/10, na.rm = TRUE)),
+                                           bind = TRUE)%>%data.frame()
+  # rename data columns
+  names(extract_buffer_region)[(ncol(extract_buffer_region)-2):ncol(extract_buffer_region)] <- output_cols
+
+  extract_buffer_region[output_cols] <- lapply(extract_buffer_region[output_cols], as.numeric)
+
+  return(extract_buffer_region)
+}
+
+
+
+sg_clay_buffer_top <- extract_buffer(sg_clay_conus_top, clay_loc_sf_top, buffer_size_m = 1000, output_cols = c("sg_mean", "sg_count", "sg_sd"))
+sg_clay_buffer_btm <- extract_buffer(sg_clay_conus_btm, clay_loc_sf_btm, buffer_size_m = 1000, output_cols = c("sg_mean", "sg_count", "sg_sd"))
+
+sg_clay_buffer <- rbind(sg_clay_buffer_top, sg_clay_buffer_btm)
+
+sg_pH_buffer_top <- extract_buffer(sg_pH_conus_top, pH_loc_sf_top, buffer_size_m = 1000, output_cols = c("sg_mean", "sg_count", "sg_sd"))
+sg_pH_buffer_btm <- extract_buffer(sg_pH_conus_btm, pH_loc_sf_btm, buffer_size_m = 1000, output_cols = c("sg_mean", "sg_count", "sg_sd"))
+
+sg_pH_buffer <- rbind(sg_pH_buffer_top, sg_pH_buffer_btm)
+
+combined_monet <- monet_rs%>%
+  mutate(
+    Site_Code = sapply(strsplit(Sample_Name, "_"), `[`, 3),
+    Core_Section = sapply(strsplit(Sample_Name, "_"), `[`, 4)
+  )%>%
+  left_join(rs_coord, by = c("Site_Code"))%>%
+  dplyr::select(Sample_Name, respiration_ppm_co2_c, respiration_mg_co2_c_g_soil_day_24hour, respiration_mg_co2_c_g_soil_day_96hour,
+         Site_Code, Core_Section, Lat, Long)
+
+soil_Rh_conus <- read_project_mask("./data/srdb/soil_Rh_mean.tif", conus_valid)
+soil_Rh_location <-  extract_buffer(soil_Rh_conus, monet_rs_coords, 1000, output_cols = c("srdb_mean", "srdb_count", "srdb_sd"))
+
+soil_Rh_buffer <- monet_rs%>%
+  mutate(
+  Site_Code = sapply(strsplit(Sample_Name, "_"), `[`, 3),
+  Core_Section = sapply(strsplit(Sample_Name, "_"), `[`, 4))%>%
+  left_join(soil_Rh_location, by = c("Site_Code"))%>%
+  dplyr::select(Sample_Name, respiration_ppm_co2_c, respiration_mg_co2_c_g_soil_day_24hour, respiration_mg_co2_c_g_soil_day_96hour,
+                Site_Code, Core_Section, srdb_mean, srdb_count, srdb_sd)
+
+
+## 1:1 Plots ----
+# clay
+sg_clay_buffer_plot <- sg_clay_buffer%>%
+  mutate(ymin = sg_mean - sg_sd,
+         ymax = sg_mean + sg_sd)%>%
+  ggplot(aes(x = Clay_percent, y = sg_mean, color = core_section, fill = core_section))+
+  geom_point()+
+  #geom_path()
+  geom_errorbar(aes(x = Clay_percent, ymin = ymin, ymax = ymax))+
+  geom_abline(intercept = 0, slope = 1, color = "black")+
+  stat_smooth(formula = y~x,method = "lm", se = TRUE, level = 0.95)+
+  stat_poly_eq(
+    aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~"),
+        group = core_section,
+        color = core_section),
+    formula = y ~ x,
+    parse = TRUE,
+    size = 3
+  ) +
+  labs(title = "SoilGrids vs MONet Clay Percent",
+       x = "MONet (% Clay)", y = "SoilGrids (% Clay)")+
+  theme_bw()
+
+ggsave(plot = sg_clay_buffer_plot, file = "./figures/clay_OneToOne_plot.png")
+
+# pH
+sg_pH_buffer_plot <- sg_pH_buffer%>%
+  mutate(ymin = sg_mean - sg_sd,
+         ymax = sg_mean + sg_sd)%>%
+  ggplot(aes(x = pH, y = sg_mean, color = core_section, fill = core_section))+
+  geom_point()+
+  #geom_path()
+  geom_errorbar(aes(x = pH, ymin = ymin, ymax = ymax))+
+  geom_abline(intercept = 0, slope = 1, color = "black")+
+  stat_smooth(formula = y~x,method = "lm", se = TRUE, level = 0.95)+
+  stat_poly_eq(
+    aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~"),
+        group = core_section,
+        color = core_section),
+    formula = y ~ x,
+    parse = TRUE,
+    size = 3
+  ) +
+  labs(title = "SoilGrids vs MONet pH",
+       x = "MONet (pH)", y = "SoilGrids (pH)")+
+  theme_bw()
+
+ggsave(plot = sg_pH_buffer_plot, file = "./figures/pH_OneToOne_plot.png")
+
+# Random sample comparison -----------------------------------------------------
+
+process_plot_data <- function(soil_data, n_samples = 1000){
+  # Sample soil data
+  plot_data <- soil_data %>%
+    group_by(Climate, source) %>%
+    slice_sample(n = n_samples) %>%
+    ungroup()
+
+  # Create table of sample sizes for plot label
+  sample_sizes <- plot_data %>%
+    as.data.frame()%>%
+    dplyr::select(Climate, source)%>%
+    group_by(Climate, source) %>%
+    summarise(n = n())%>%
+    pivot_wider(names_from = "source", values_from = "n")%>%
+    filter(MONet > 1)%>%
+    mutate(axis_label = paste0(Climate, "\n", "MONet = ", MONet, ", SoilGrids = ", SoilGrids)) #TODO object 'SoilGrids' not found
+
+  # Join tables
+  plot_data_samples <- left_join(plot_data, sample_sizes, by = "Climate")
+
+  return(plot_data_samples)
+}
+
+plot_clay_top <- process_plot_data(clay_MONet_sg_top)
+
+plot_clay_btm <- process_plot_data(clay_MONet_sg_btm)
+
+plot_pH_top <- process_plot_data(pH_MONet_sg_top)
+
+plot_pH_btm <- process_plot_data(pH_MONet_sg_btm)
+
+
+
+sg_random_sample <- function(MONet_sg_top, sample_sizes_sg_top, seeds){
+
+  MONet_data <- MONet_sg_top %>%
+    filter(source == "MONet")
+
+  for(seed in seeds){
+    set.seed(seed)
+    for(zone in unique(sample_sizes_sg_top$Climate)){
+
+      n_samples <- sample_sizes_sg_top$MONet[sample_sizes_sg_top$Climate == zone]
+
+      sampled_sg_zone <- MONet_sg_top%>%
+        as.data.frame()%>%
+        filter(Climate == zone, source != "MONet")%>%
+        slice_sample(n = n_samples)%>%
+        mutate(source = paste0("SoilGrids_sample_", which(seed == seeds)))
+
+      MONet_data <- bind_rows(MONet_data, sampled_sg_zone)
+    }
+  }
+  return(MONet_data)
+}
+
+sample_sizes_pH_top <- pH_MONet_sg_top %>%
+  as.data.frame()%>%
+  dplyr::select(Climate, source)%>%
+  group_by(Climate, source) %>%
+  summarise(n = n())%>%
+  pivot_wider(names_from = "source", values_from = "n")%>%
+  filter(MONet > 1)%>%
+  mutate(soilGrids = MONet)%>%
+  mutate(axis_label = paste0(Climate, "\n", "MONet = ", MONet, ", SoilGrids = ", soilGrids))
+
+sample_sizes_clay_top <- clay_MONet_sg_top %>%
+  as.data.frame()%>%
+  dplyr::select(Climate, source)%>%
+  group_by(Climate, source) %>%
+  summarise(n = n())%>%
+  pivot_wider(names_from = "source", values_from = "n")%>%
+  filter(MONet > 1)%>%
+  mutate(soilGrids = MONet)%>%
+  mutate(axis_label = paste0(Climate, "\n", "MONet = ", MONet, ", SoilGrids = ", soilGrids))
+
+pH_samples <- sg_random_sample(pH_MONet_sg_top, sample_sizes_pH_top, seeds = c(1, 5, 10))
+clay_samples <- sg_random_sample(clay_MONet_sg_top, sample_sizes_clay_top, seeds = c(1, 5, 10))
+
+## Random sample plots ----
+sample_colors <- c("#8080C0", "#D6AA80", "#D98040", "#CC5500")
+names(sample_colors) <- unique(pH_samples$source)
+
+pH_random_sample <- pH_samples%>%
+  mutate(Experiment = as.factor(if_else(source == "MONet", "MONet_pH", source)))%>%
+  left_join(sample_sizes_pH_top, by = c("Climate"))%>%
+  filter(!is.na(axis_label))%>%
+  ggplot(aes(x = pH, y = axis_label,
+             fill = source, color = source)) +
+  geom_violin(alpha = 0.7
+              , position = position_dodge(width = 0.8),
+              scale = "width") +  # Equal widths regardless of sample size
+  geom_boxplot(fill = NA,
+               position = position_dodge(width = 0.8),
+               outlier.shape = NA)+
+  theme_bw()+
+  labs(
+    title = "MONet and SoilGrids pH by Climate Zone",
+    x = "pH",
+    y = "Climate Zone"
+  )+
+  scale_y_discrete(labels = label_wrap_gen(30))+
+  scale_fill_manual(name = "Date Source", values = sample_colors, labels = c("MONet", "SoilGrids_sample_1", "SoilGrids_sample_2", "SoilGrids_sample_3"))+
+  scale_colour_manual(name = "Data Source", values = sample_colors, labels = c("MONet", "SoilGrids_sample_1", "SoilGrids_sample_2", "SoilGrids_sample_3")) +
+  guides(
+    fill = guide_legend(title = "Data Source"),  # Combine legends into one titled 'Data Source'
+    color = guide_legend(title = "Data Source")  # Ensure the same guide maps to both
+  )+
+  theme(plot.title = element_text(size = 16))
+
+names(sample_colors) <- unique(clay_samples$source)
+
+clay_random_sample <- clay_samples%>%
+  mutate(Experiment = as.factor(if_else(source == "MONet", "MONet_clay", source)))%>%
+  left_join(sample_sizes_clay_top, by = c("Climate"))%>%
+  filter(!is.na(axis_label))%>%
+  ggplot(aes(x = Clay_percent, y = axis_label,
+             fill = source, color = source)) +
+  geom_violin(alpha = 0.7,
+              position = position_dodge(width = 0.8),
+              scale = "width") +  # Equal widths regardless of sample size
+  geom_boxplot(fill = NA,
+               position = position_dodge(width = 0.8),
+               outlier.shape = NA)+
+  theme_bw()+
+  labs(
+    title = "MONet and SoilGrids Clay by Climate Zone",
+    x = "% Clay",
+    y = "Climate Zone"
+  )+
+  scale_y_discrete(labels = label_wrap_gen(30))+
+  scale_fill_manual(name = "Date Source", values = sample_colors)+
+  scale_color_manual(name = "Data Source", values = sample_colors)+guides(
+    fill = guide_legend(title = "Data Source"),  # Combine legends into one titled 'Data Source'
+    color = guide_legend(title = "Data Source")  # Ensure the same guide maps to both
+  )+
+  theme(plot.title = element_text(size = 16))
+
+
+ggsave(plot = pH_random_sample, "./figures/pH_random_sample.png")
+ggsave(plot = clay_random_sample, "./figures/clay_random_sample.png")
+
+# MONet points missing from SoilGrids ------------------------------------------
+
+monet_clay_missing <- rbind(sg_clay_monet_top_values%>%
+                              filter(is.na(crop_roi_igh_clay_0.5cm))%>%
+                              dplyr::select(Clay_percent, source, core_section, sample),
+                            sg_clay_monet_btm_values%>%
+                              filter(is.na(crop_roi_igh_clay_15.30cm))%>%
+                              dplyr::select(Clay_percent, source, core_section, sample))%>%
+  mutate(missing = TRUE)
+
+
+missing_clay <- clay_loc_sf_top%>%
+  left_join(monet_clay_missing, by = c("core_section", "Clay_percent", "source", "sample"))%>%
+  filter(missing == TRUE)%>%
+  separate(sample, into = c("prj", "Site_Code"))%>%
+  left_join(data.frame(monet_rs_coords), by = c("Site_Code"))%>%
+  mutate(location = substr(Site_Code, 1,2))%>%
+  group_by(location)%>%
+  mutate(samples = paste0("n = ", n()))%>%
+  ungroup()
+
+crop_extent <- terra::ext(-78, -74.5, 38.25, 40.5) # Define crop extent
+sg_clay_top_prj_final <- terra::crop(sg_clay_conus_top, crop_extent)  # Crop raster to extent
+
+MONet_missing_from_sg <- ggplot()+
+  tidyterra::geom_spatraster(data = sg_clay_top_prj_final)+
+  geom_sf(data = conus_valid, color = "black", alpha = 0.5)+
+  geom_sf(data = missing_clay, color = "black", size = 3.5)+
+  geom_sf(data = missing_clay, aes(color = Site_Code), size = 3)+
+  geom_sf_label(data = missing_clay, aes(label = samples), nudge_y = 0.01, nudge_x = -.3)+
+  coord_sf(xlim = c(-78,-74.5),ylim = c(38.25,40.5))+
+  theme_bw()+
+  scale_fill_gradient(low = 'white', high = 'blue', na.value=NA)+
+  labs(title = "MONet data points without SoilGrids data")+
+  theme(plot.title = element_text(size = 16))
+
+ggsave(plot = MONet_missing_from_sg, "./figures/MONet_missing_from_sg.png",  width = 8, height = 5.3)
+
+# Spatial Comparison of Clay Percent -------------------------------------------
+
+MONet_sg_clay_map <- ggplot()+
+  tidyterra::geom_spatraster(data = sg_clay_conus_top) +
+  geom_sf(data = conus_valid, color = "black", alpha = 0.3)+
+  geom_sf(data = clay_loc_sf_top, aes(fill = Clay_percent), colour = "black", size =3)+
+  geom_sf(data = clay_loc_sf_top, aes(color = Clay_percent), size =2)+
+  theme_bw()+
+  scale_fill_gradient(low = 'white', high = 'blue', na.value=NA, limits = c(0,85))+
+  scale_color_gradient(low = 'white', high = 'blue', na.value=NA, limits = c(0,85), guide = "none")+
+  labs(
+    title = "Spatial Comparison of MONet Clay Content to SoilGrids (Top sample)",
+    fill = "% Clay")+
+  theme(plot.title = element_text(size = 16),
+        margin(0,0,0,0,unit = "mm"))
+
+ggsave(plot = MONet_sg_clay_map, "./figures/MONet_sg_clay_map.png",  width = 8, height = 3.8)
+
+# Clay comparison GCAM regions -------------------------------------------------
+
+GCAM_clay_content <- read.csv("data/gcam/mapped_clay_KN.csv")
+
+
+GCAM_clay_usa <- GCAM_clay_content%>%
+  filter(iso == "usa", c_type == "clay content (0-30 cms)")%>%
+  group_by(iso, glu_code, GCAM_GLU_name, c_type)%>%
+  summarize(gcam_average = mean(weighted_average), gcam_median_value = median(median_value), gcam_min_value = min(min_value), gcam_max_value = max(max_value), gcam_q1_value = mean(q1_value), gcam_q3_value = mean(q3_value))
+
+Sys.setenv(SHAPE_RESTORE_SHX = "YES")
+global_basins <- read_sf("./data/shapefiles/gcam_boundaries_morai_3p1_0p5arcmin_wgs84/main_outputs/glu_boundaries_moirai_landcells_3p1_0p5arcmin.shp")
+
+global_basins <- st_set_crs(global_basins, 4326)
+
+global_basins_prj <- global_basins %>%
+  st_transform(crs = st_crs(conus_valid))
+
+conus_basins <- st_crop(global_basins, conus_valid)
+
+clay_basins <- st_intersection(clay_loc_sf_top, conus_basins)
+
+clay_basin_summary <- clay_basins%>%
+  data.frame()%>%
+  group_by(core_section, glu_id, glu_nm)%>%
+  summarize(Clay_percent_mean = mean(Clay_percent), monet_sd = sd(Clay_percent),
+            monet_min = min(Clay_percent), monet_max = max(Clay_percent), monet_n = n())
+
+MONet_GCAM_clay <- clay_basin_summary%>%
+  left_join(GCAM_clay_usa, by = c("glu_id" = "glu_code"))
+
+GCAM_clay_map <- left_join(conus_basins, GCAM_clay_usa, by = c("glu_id" = "glu_code"))
+
+## MONet GCAM plot ----
+MONet_GCAM_plot <- ggplot()+
+  geom_sf(data = GCAM_clay_map, aes(fill = gcam_average), color = "black")+
+  geom_sf(data = clay_loc_sf_top, aes(fill = Clay_percent), colour = "black", size =3)+
+  geom_sf(data = clay_loc_sf_top, aes(color = Clay_percent), size =2)+
+  theme_bw()+
+  scale_fill_gradient(low = 'white', high = 'blue', na.value=NA, limits = c(0,85))+
+  scale_color_gradient(low = 'white', high = 'blue', na.value=NA, limits = c(0,85), guide = "none")+
+  labs(
+    title = "Spatial Comparison of MONet to GCAM Clay Content (Top sample)",
+    fill = "% Clay")+
+  theme(plot.title = element_text(size = 18))
+
+ggsave(plot = MONet_GCAM_plot, "./figures/MONet_GCAM_plot.png", , width = 8, height = 5)
+
+
+
+
+# Write outputs ----------------------------------------------------------------
+
+
+#clay
+save(
+  sg_clay_monet_top_values, sg_clay_monet_btm_values,
+  clay_MONet_sg_top,
+  plot_clay_top, plot_clay_btm,
+  MONet_GCAM_clay, clay_loc_sf_top,
+  file= "R_data/processed_clay.RData"
+)
+
+#pH
+save(
+  pH_MONet_sg_top,
+  plot_pH_top, plot_pH_btm,
+  sg_pH_monet_top_values, sg_pH_monet_btm_values,
+  file = "R_data/processed_pH.RData"
+)
+
+#Rs
+save(
+  srdb, SRDB_coords, monet_rs,monet_rs_coords,
+  plot_pH_top,
+  file = "R_data/processed_Rs.RData"
+)
+
+end <- Sys.time()
+
+end-start
