@@ -577,7 +577,7 @@ combined_monet <- monet_rs%>%
   dplyr::select(Sample_Name, respiration_ppm_co2_c, respiration_mg_co2_c_g_soil_day_24hour, respiration_mg_co2_c_g_soil_day_96hour,
          Site_Code, Core_Section, Lat, Long)
 
-soil_Rh_conus <- read_project_mask("./data/SoilResp_HeterotrophicResp_1928/data/soil_Rh_mean.tif", conus_valid)
+soil_Rh_conus <- read_project_mask("./data/srdb/soil_Rh_mean.tif", conus_valid)
 soil_Rh_location <-  extract_buffer(soil_Rh_conus, monet_rs_coords, 1000, output_cols = c("srdb_mean", "srdb_count", "srdb_sd"))
 
 soil_Rh_buffer <- monet_rs%>%
@@ -785,16 +785,20 @@ ggsave(plot = clay_random_sample, "./figures/clay_random_sample.png")
 
 # Clay comparison GCAM regions -------------------------------------------------
 
-GCAM_clay_content <- read.csv("./from Kanishka_clay/mapped_clay_KN.csv")
+GCAM_clay_content <- read.csv("data/from Kanishka_clay/mapped_clay_KN.csv")
 
 GCAM_clay_usa <- GCAM_clay_content%>%
   filter(iso == "usa", c_type == "clay content (0-30 cms)")%>%
   group_by(iso, glu_code, GCAM_GLU_name, c_type)%>%
   summarize(gcam_average = mean(weighted_average), gcam_median_value = median(median_value), gcam_min_value = min(min_value), gcam_max_value = max(max_value), gcam_q1_value = mean(q1_value), gcam_q3_value = mean(q3_value))
 
-global_basins <- read_sf("./data/shapefiles/gcam_boundaries_moirai_3p1_0p5arcmin_wgs84/main_outputs/glu_boundaries_moirai_landcells_3p1_0p5arcmin.shp")
+Sys.setenv(SHAPE_RESTORE_SHX = "YES")
+global_basins <- read_sf("./data/shapefiles/gcam/glu_boundaries_moirai_landcells_3p1_0p5arcmin.shp")
 
-global_basins_prj <- global_basins%>%st_transform(crs = st_crs(conus_valid))
+global_basins <- st_set_crs(global_basins, 4326)
+
+global_basins_prj <- global_basins %>%
+  st_transform(crs = st_crs(conus_valid))
 
 conus_basins <- st_crop(global_basins, conus_valid)
 
