@@ -22,6 +22,7 @@ library(httr)
 library(utils)
 library(gdalUtilities)
 library(ggpmisc)
+library(inborutils)
 
 
 # 1. Download SRDB from github ----------------------------------------------------
@@ -409,9 +410,6 @@ read_project_mask <- function(raster_path, conus_valid){
 # For spatial comparisons ------------------------------------------------------
 sg_clay_conus_top_scaled <- sg_clay_conus_top / 10  # Scale raster values as needed
 
-# Save raster as .tif
-terra::writeRaster(sg_clay_conus_top_scaled, "./R_data/sg_clay_conus_top.tif", overwrite = TRUE)
-
 # SoilGrids and MONet Histograms -----------------------------------------------
 
 process_soil_data <- function(type, section, MONet_df, sg_df, climate_mapping_df, sg_column_name) {
@@ -495,7 +493,6 @@ pH_MONet_sg_btm <- process_soil_data(
   sg_column_name = "crop_roi_igh_ph_15.30cm"
 )
 
-
 pH_top <- pH_MONet_sg_top%>%
   mutate(Experiment = as.factor(if_else(source == "MONet", "MONet_pH", "comp_pH")))%>%
   ggplot(aes(x = pH, fill = Experiment))+
@@ -528,8 +525,6 @@ ggsave(plot = pH_hist, "./figures/pH_hist.png")
 ggsave(plot = pH_top, "./figures/pH_top.png")
 ggsave(plot = pH_btm, "./figures/pH_btm.png")
 
-
-
 # 1:1 Comparisons Buffer -------------------------------------------------------
 
 extract_buffer <- function(raster, point_data, buffer_size_m, output_cols){
@@ -556,8 +551,6 @@ extract_buffer <- function(raster, point_data, buffer_size_m, output_cols){
   return(extract_buffer_region)
 }
 
-
-
 sg_clay_buffer_top <- extract_buffer(sg_clay_conus_top, clay_loc_sf_top, buffer_size_m = 1000, output_cols = c("sg_mean", "sg_count", "sg_sd"))
 sg_clay_buffer_btm <- extract_buffer(sg_clay_conus_btm, clay_loc_sf_btm, buffer_size_m = 1000, output_cols = c("sg_mean", "sg_count", "sg_sd"))
 
@@ -577,7 +570,7 @@ combined_monet <- monet_rs%>%
   dplyr::select(Sample_Name, respiration_ppm_co2_c, respiration_mg_co2_c_g_soil_day_24hour, respiration_mg_co2_c_g_soil_day_96hour,
          Site_Code, Core_Section, Lat, Long)
 
-soil_Rh_conus <- read_project_mask("./data/srdb/soil_Rh_mean.tif", conus_valid)
+soil_Rh_conus <- read_project_mask("./data/SoilResp_HeterotrophicResp_1928/data/soil_Rh_mean.tif", conus_valid)
 soil_Rh_location <-  extract_buffer(soil_Rh_conus, monet_rs_coords, 1000, output_cols = c("srdb_mean", "srdb_count", "srdb_sd"))
 
 soil_Rh_buffer <- monet_rs%>%
@@ -587,7 +580,6 @@ soil_Rh_buffer <- monet_rs%>%
   left_join(soil_Rh_location, by = c("Site_Code"))%>%
   dplyr::select(Sample_Name, respiration_ppm_co2_c, respiration_mg_co2_c_g_soil_day_24hour, respiration_mg_co2_c_g_soil_day_96hour,
                 Site_Code, Core_Section, srdb_mean, srdb_count, srdb_sd)
-
 
 ## 1:1 Plots ----
 # clay
@@ -670,8 +662,6 @@ plot_clay_btm <- process_plot_data(clay_MONet_sg_btm)
 plot_pH_top <- process_plot_data(pH_MONet_sg_top)
 
 plot_pH_btm <- process_plot_data(pH_MONet_sg_btm)
-
-
 
 sg_random_sample <- function(MONet_sg_top, sample_sizes_sg_top, seeds){
 
@@ -778,7 +768,6 @@ clay_random_sample <- clay_samples%>%
   )+
   theme(plot.title = element_text(size = 16))
 
-
 ggsave(plot = pH_random_sample, "./figures/pH_random_sample.png")
 ggsave(plot = clay_random_sample, "./figures/clay_random_sample.png")
 
@@ -792,7 +781,6 @@ monet_clay_missing <- rbind(sg_clay_monet_top_values%>%
                               dplyr::select(Clay_percent, source, core_section, sample))%>%
   mutate(missing = TRUE)
 
-
 missing_clay <- clay_loc_sf_top%>%
   left_join(monet_clay_missing, by = c("core_section", "Clay_percent", "source", "sample"))%>%
   filter(missing == TRUE)%>%
@@ -804,7 +792,7 @@ missing_clay <- clay_loc_sf_top%>%
   ungroup()
 
 crop_extent <- terra::ext(-78, -74.5, 38.25, 40.5) # Define crop extent
-sg_clay_top_prj_final <- terra::crop(sg_clay_conus_top, crop_extent)  # Crop raster to extent
+sg_clay_top_prj_final <- terra::crop(sg_clay_conus_top_scaled, crop_extent)  # Crop raster to extent
 
 MONet_missing_from_sg <- ggplot()+
   tidyterra::geom_spatraster(data = sg_clay_top_prj_final)+
@@ -815,15 +803,19 @@ MONet_missing_from_sg <- ggplot()+
   coord_sf(xlim = c(-78,-74.5),ylim = c(38.25,40.5))+
   theme_bw()+
   scale_fill_gradient(low = 'white', high = 'blue', na.value=NA)+
-  labs(title = "MONet data points without SoilGrids data")+
-  theme(plot.title = element_text(size = 16))
+  labs(
+       title = "MONet data points without SoilGrids data")+
+  theme(plot.title = element_text(size = 16),
+        axis.title.x = element_blank(), # Remove x-axis title
+        axis.title.y = element_blank()
+  )
 
 ggsave(plot = MONet_missing_from_sg, "./figures/MONet_missing_from_sg.png",  width = 8, height = 5.3)
 
 # Spatial Comparison of Clay Percent -------------------------------------------
 
 MONet_sg_clay_map <- ggplot()+
-  tidyterra::geom_spatraster(data = sg_clay_conus_top) +
+  tidyterra::geom_spatraster(data = sg_clay_conus_top_scaled) +
   geom_sf(data = conus_valid, color = "black", alpha = 0.3)+
   geom_sf(data = clay_loc_sf_top, aes(fill = Clay_percent), colour = "black", size =3)+
   geom_sf(data = clay_loc_sf_top, aes(color = Clay_percent), size =2)+
@@ -840,16 +832,26 @@ ggsave(plot = MONet_sg_clay_map, "./figures/MONet_sg_clay_map.png",  width = 8, 
 
 # Clay comparison GCAM regions -------------------------------------------------
 
-GCAM_clay_content <- read.csv("data/gcam/mapped_clay_KN.csv")
+doi <- "10.5281/zenodo.4688451"
+local_path <- "./data/shapefiles/"
+inborutils::download_zenodo(doi, local_path, quiet = TRUE)
+list.files(local_path)
+destfile <- "gcam_boundaries_moirai_3p1_0p5arcmin_wgs84.zip"
+extraction_directory <- ""
 
+if (file.exists(paste0(local_path,destfile))) {
+  # Try unzipping the file and catch any errors
+  tryCatch({
+    unzip(paste0(local_path,destfile), exdir = paste0(local_path,extraction_directory))
+    cat("Download and extraction of GCAM basin data complete!\n")
+  }, error = function(e) {
+    cat("Error in extraction:", e$message, "\n")
+  })
+} else {
+  cat("Failed to download the data.\n")
+}
 
-GCAM_clay_usa <- GCAM_clay_content%>%
-  filter(iso == "usa", c_type == "clay content (0-30 cms)")%>%
-  group_by(iso, glu_code, GCAM_GLU_name, c_type)%>%
-  summarize(gcam_average = mean(weighted_average), gcam_median_value = median(median_value), gcam_min_value = min(min_value), gcam_max_value = max(max_value), gcam_q1_value = mean(q1_value), gcam_q3_value = mean(q3_value))
-
-Sys.setenv(SHAPE_RESTORE_SHX = "YES")
-global_basins <- read_sf("./data/shapefiles/gcam_boundaries_morai_3p1_0p5arcmin_wgs84/main_outputs/glu_boundaries_moirai_landcells_3p1_0p5arcmin.shp")
+global_basins <- read_sf(paste0(local_path,"/gcam_boundaries_moirai_3p1_0p5arcmin_wgs84/main_outputs/glu_boundaries_moirai_landcells_3p1_0p5arcmin.shp"))
 
 global_basins <- st_set_crs(global_basins, 4326)
 
@@ -865,6 +867,13 @@ clay_basin_summary <- clay_basins%>%
   group_by(core_section, glu_id, glu_nm)%>%
   summarize(Clay_percent_mean = mean(Clay_percent), monet_sd = sd(Clay_percent),
             monet_min = min(Clay_percent), monet_max = max(Clay_percent), monet_n = n())
+
+GCAM_clay_content <- read.csv("data/gcam/mapped_clay_KN.csv")
+
+GCAM_clay_usa <- GCAM_clay_content%>%
+  filter(iso == "usa", c_type == "clay content (0-30 cms)")%>%
+  group_by(iso, glu_code, GCAM_GLU_name, c_type)%>%
+  summarize(gcam_average = mean(weighted_average), gcam_median_value = median(median_value), gcam_min_value = min(min_value), gcam_max_value = max(max_value), gcam_q1_value = mean(q1_value), gcam_q3_value = mean(q3_value))
 
 MONet_GCAM_clay <- clay_basin_summary%>%
   left_join(GCAM_clay_usa, by = c("glu_id" = "glu_code"))
@@ -884,13 +893,9 @@ MONet_GCAM_plot <- ggplot()+
     fill = "% Clay")+
   theme(plot.title = element_text(size = 18))
 
-ggsave(plot = MONet_GCAM_plot, "./figures/MONet_GCAM_plot.png", , width = 8, height = 5)
-
-
-
+ggsave(plot = MONet_GCAM_plot, "./figures/MONet_GCAM_plot.png", width = 8, height = 5)
 
 # Write outputs ----------------------------------------------------------------
-
 
 #clay
 save(
@@ -912,10 +917,6 @@ save(
 #Rs
 save(
   srdb, SRDB_coords, monet_rs,monet_rs_coords,
-  plot_pH_top,
+  plot_pH_top, soil_Rh_buffer,
   file = "R_data/processed_Rs.RData"
 )
-
-end <- Sys.time()
-
-end-start

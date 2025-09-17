@@ -51,7 +51,7 @@ This project integrates multiple high-quality datasets. A summary of their sourc
 | SRDB                    | Soil respiration observations aggregated from published journal articles globally.                                  | [SRDB GitHub Repository](https://github.com/bpbond/srdb)                                                            |
 | Global Gridded 1-km Rh  | Soil heterotrophic respiration upsacled globally at 1-km reslution.          | [NASA Earthdata](https://www.earthdata.nasa.gov/data/catalog/ornl-cloud-soilresp-heterotrophicresp-1928-1)|
 | GCAM Basin Clay Content| Clay content and summary statistics of GCAM's 232 basins | [GCAM](https://github.com/JGCRI/gcam-core)|
-| GCAM Basin Shapefiles | Spatial boundaries of GCAM's 232 basins at 0.5 arc mins resolution in crs: EPSG:4326 WGS84 - World Geodetic System 1984 | [GCAM basin boundaries from moirai](https://data.niaid.nih.gov/resources?id=zenodo_4014307)|
+| GCAM Basin Shapefiles | Spatial boundaries of GCAM's 232 basins at 0.5 arc mins resolution in crs: EPSG:4326 WGS84 - World Geodetic System 1984 | [GCAM basin boundaries from moirai](https://zenodo.org/records/4688451#.YiKITOjMJaQ)|
 | Climate Zones           | Koppen-Geiger classification shapefile used for grouping comparisons by climatic similarities.                     | [North American Climate Atlas](https://www.cec.org/north-american-environmental-atlas/climate-zones-of-north-america) |
 | USA Shapefiles          | Spatial reference shapefiles for delineating site boundaries in the continental U.S.                               | [NOAA GIS US States Shapefiles](https://www.weather.gov/gis/USStates)                                               |
 

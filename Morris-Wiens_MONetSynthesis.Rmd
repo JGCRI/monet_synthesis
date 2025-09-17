@@ -279,7 +279,6 @@ Using the gridded version of SRDB, we can directly compare SRDB Rs to MONet Rs. 
 In the figure below, the vertical bars represent the calculated confidence interval of the SRDB Rs and the solid line represents y=x.
 ```{r extract SRDB Rs data, echo = FALSE}
 
-
 #Plot both Rs datasets
 soil_Rh_buffer %>%
   left_join(monet_rs_index, by =  "Site_Code") %>%
@@ -579,4 +578,4 @@ Error bars for each point suggest variability and uncertainty in clay content me
 
 # Conclusion  
 
-This markdown has walked through some high-level analysis and comparison of MONet soil data and closely related databases. The code of making any figures that are called here can be found in MONetDataPrepocessing.R. There was so much more to explore than could be easily included in this compact format!  
+This markdown has walked through some high-level analysis and comparison of MONet soil data and closely related databases. The code for making any figures that are called here can be found in MONetDataPrepocessing.R. There was so much more to explore than could be easily included in this compact format!  
