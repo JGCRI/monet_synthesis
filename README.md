@@ -10,18 +10,16 @@
 
 ## What is MONet?
 
-The **M**olecular **O**bservation **Net**work is on ongoign project developed by the Environmental Molecular Sciences Laboratory at Pacific Northwest National Lab, with aims to create a continetial scale database of standardized soil molecular properties to advance the understanding of soil biogeochemistry.
-The **MONet Data Synthesis Project** aims to systematically compare and integrate soil data from the **MONet** with publicly available datasets, such as **SoilGrids** and the **Soil Respiration Database (SRDB)**. This repository contains scripts to analyze and compare key soil properties (e.g., soil respiration, pH, and clay content) across diverse climatic zones, with an emphasis on addressing spatial scale differences between global datasets and national-scale, high-resolution efforts like MONet.
+The **M**olecular **O**bservation **Net**work is on ongoing project developed by the Environmental Molecular Sciences Laboratory at Pacific Northwest National Lab, with aims to create a continential scale database of standardized soil molecular properties to advance the understanding of soil biogeochemistry.
+The **MONet Data Synthesis Project** aims to systematically compare and integrate soil data from **MONet** with established publicly available datasets, such as **SoilGrids** and the **Soil Respiration Database (SRDB)**. This repository contains scripts to analyze and compare key soil properties (e.g., soil respiration, pH, and clay content) across known drivers of variability, with an emphasis on addressing spatial scale differences between global datasets and national-scale efforts like MONet.
 
 ### Goals of the Analysis
 
 1. **Understand Soil Properties Relative to Environmental Drivers:**
    - Explore soil respiration variations with mean annual precipitation (MAP) and mean annual temperature (MAT).
    - Assess the spatial distribution and variability in pH and clay content at national and sub-national levels.
-   - Compare global trends (e.g., SoilGrids) with regional/national observations (e.g., MONet).
-2. **Cross-Dataset Validation:**
-   - Benchmark soil properties across MONet and publicly available soil datasets to evaluate consistency and spatial variability.
-3. **Enhance Data Accessibility:**
+   - Compare trends across subsamples of larger datasets (e.g., SoilGrids) with regional/national observations (e.g., MONet).
+2. **Enhance Data Accessibility:**
    - Provide processed data, visualizations, and detailed scripts to the soil science, biogeochemistry, and environmental science communities.
 
 ---
@@ -146,5 +144,5 @@ The analysis pipeline includes:
 2. **pH and Clay Content Comparison**:
    - Cross-referencing MONet-observed properties with SoilGrids' datasets spatially and within climatic zones.
 
-4. **Data Visualization**:
+3. **Data Visualization**:
    - Generating maps of sample coverage and plots comparing different datasets.
