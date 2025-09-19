@@ -284,13 +284,13 @@ soil_Rh_buffer %>%
 
 monet_rs_index$respiration_rate <- monet_rs_index$rs_index
 
-bulk_density = 1.33 #g/cm3
-d = 10 #cm
-area_conv = 10000 #cm^3
-days_per_year = 365 # days in year
-mass_conv = 1000 #mg/g
+bulk_density <- 1.33 #g/cm3
+d <- 10 #cm
+area_conv <- 10000 #cm^3
+days_per_year <- 365 # days in year
+mass_conv <- 1000 #mg/g
 
-conversion_factor = 1/(bulk_density*d*area_conv)*1/days_per_year*mass_conv
+conversion_factor <- 1/(bulk_density*d*area_conv)*1/days_per_year*mass_conv
 
 soil_Rh_buffer %>%
   left_join(monet_rs_index, by =  "Site_Code") %>%
@@ -568,7 +568,7 @@ Error bars for each point suggest variability and uncertainty in clay content me
 
 # Conclusion  
 
-This markdown has walked through some high-level analysis and comparison of MONet soil data and closely related databases. The code for making any figures that are called here can be found in MONetDataPrepocessing.R. There was so much more to explore than could be easily included in this compact format!  
+This Rmarkdown has walked through some high-level analysis and comparison of MONet soil data and closely related databases. The code for making any figures that are called here can be found in `R/MONetDataPrepocessing.R`. There was so much more to explore than could be easily included in this compact format!  
 
 # Reproducibility
 
