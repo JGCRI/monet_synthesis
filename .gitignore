@@ -9,7 +9,8 @@
 .Ruserdata
 *.png
 
-Morris-Wiens_MONetSynthesis.html
+# "Morris-Wiens_MONetSynthesis.html" and other Rmd outputs
+*.html
 
 /data/*
 /R_data/*

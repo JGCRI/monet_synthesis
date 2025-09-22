@@ -10,30 +10,45 @@
 
 ## What is MONet?
 
-The **M**olecular **O**bservation **Net**work is on ongoing project developed by the Environmental Molecular Sciences Laboratory at Pacific Northwest National Lab, with aims to create a continential scale database of standardized soil molecular properties to advance the understanding of soil biogeochemistry.
-The **MONet Data Synthesis Project** aims to systematically compare and integrate soil data from **MONet** with established publicly available datasets, such as **SoilGrids** and the **Soil Respiration Database (SRDB)**. This repository contains scripts to analyze and compare key soil properties (e.g., soil respiration, pH, and clay content) across known drivers of variability, with an emphasis on addressing spatial scale differences between global datasets and national-scale efforts like MONet.
+The **M**olecular **O**bservation **Net**work
+(https://www.emsl.pnnl.gov/monet) is on ongoing project developed by the
+Environmental Molecular Sciences Laboratory at Pacific Northwest
+National Lab, with aims to create a continential scale database of
+standardized soil molecular properties to advance the understanding of
+soil biogeochemistry. The **MONet Data Synthesis Project** aims to
+systematically compare and integrate soil data from **MONet** with
+established publicly available datasets, such as **SoilGrids** and the
+**Soil Respiration Database (SRDB)**. This repository contains scripts
+to analyze and compare key soil properties (e.g., soil respiration, pH,
+and clay content) across known drivers of variability, with an emphasis
+on addressing spatial scale differences between global datasets and
+national-scale efforts like MONet.
 
 ### Goals of the Analysis
 
 1. **Understand Soil Properties Relative to Environmental Drivers:**
-   - Explore soil respiration variations with mean annual precipitation (MAP) and mean annual temperature (MAT).
-   - Assess the spatial distribution and variability in pH and clay content at national and sub-national levels.
-   - Compare trends across subsamples of larger datasets (e.g., SoilGrids) with regional/national observations (e.g., MONet).
+   - Explore soil respiration variations with mean annual precipitation
+   (MAP) and mean annual temperature (MAT).
+   - Assess the spatial distribution and variability in pH and clay
+   content at national and sub-national levels. 
+   - Compare trends across subsamples of larger datasets (e.g.,
+   SoilGrids) with regional/national observations (e.g., MONet).
 2. **Enhance Data Accessibility:**
-   - Provide processed data, visualizations, and detailed scripts to the soil science, biogeochemistry, and environmental science communities.
+   - Provide processed data, visualizations, and detailed scripts to the
+   soil science, biogeochemistry, and environmental science communities.
 
 ---
 
 ## Repository Overview
 
-| **Folder**       | **Description**                                                                                  |
-|-------------------|--------------------------------------------------------------------------------------------------|
-| `data/`           | Directory for storing raw and publicly available datasets.                                       |
-| `R_data/` | Directory for saving intermediate processed data |
-| `figures/`        | Directory for saving plots and visual outputs from the analyses.                                 |
-|`MONetSynthesis.Rmd`| R markdown file containing analysis of MONet data product.                                      |
-|`MONetDataPreprocessing.R`| R script for downloading and preprocessing data					       |
-| `README.md`       | Overview of the repository, datasets, and instructions for reproducing the analyses.             |
+| **Folder**               | **Description**                                                                      |
+|--------------------------|--------------------------------------------------------------------------------------|
+| `data/`                  | Directory for storing raw and publicly available datasets.                           |
+| `R_data/`                | Directory for saving intermediate processed data                                     |
+| `figures/`               | Directory for saving plots and visual outputs from the analyses.                     |
+|`MONetSynthesis.Rmd`      | R markdown file containing analysis of MONet data product.                           |
+|`MONetDataPreprocessing.R`| R script for downloading and preprocessing data					                  |
+| `README.md`              | Overview of the repository, datasets, and instructions for reproducing the analyses. |
 
 ---
 
@@ -59,25 +74,34 @@ This project integrates multiple high-quality datasets. A summary of their sourc
 
 1. **Download Raw Data**:
    - Clone this repository and navigate to the `data/` folder.
-   - Download the MONet data, Climate Zones, and USA shapefiles from the sources provided above and store them in the organized subdirectories.
+   - Download the MONet data, Climate Zones, and USA shapefiles from the
+   sources provided above and store them in the organized
+   subdirectories.
    - For SoilGrids and SRDB, run the get_SGdata.R and get_SRDBdata.R 
    
 2. **Install Required R Packages**:
    - Install all necessary R libraries used in this analysis
 
 3. **Run Data Processing Scripts**
-   - Open and run provided R script for data download and processing (`MONetDataProcessing.R`) 
-   - This script will take some time to run and saves a Rdata file to the directory
+   - Open and run provided R script for data download and processing
+   (`MONetDataProcessing.R`) 
+   - This script will take some time to run and saves a Rdata file to
+   the directory
 
 4. **Run Analysis Scripts**:
    - Open the provided R markdown (`MONetSynthesis.Rmd`) script.
    - Run the script to:
-     - Conduct exploratory analyses comparing respiration trends, MAP/MAT relationships, etc.
-     - Perform spatial and statistical comparisons on pH and clay content.
+     - Conduct exploratory analyses comparing respiration trends,
+     MAP/MAT relationships, etc.
+     - Perform spatial and statistical comparisons on pH and clay
+     content.
 
 ---
+
 ## File structure
-Below is the file structure that should exist after downloading required data and running `MONetDataProcessing.R`
+
+Below is the file structure that should exist after downloading required
+data and running `MONetDataProcessing.R`
 ```bash
 ├── MONetSynthesis.Rproj
 ├── Morris-Wiens_MONetSynthesis.Rmd
@@ -132,17 +156,23 @@ Below is the file structure that should exist after downloading required data an
 ├── figures
 └── README.md
 ```
-*These folders contain data that is generated in `MONetDataPreprocessing.R`
+*These folders contain data that is generated in
+`MONetDataPreprocessing.R`
 
 ## Statistical and Comparative Focus Areas
+
 The analysis pipeline includes:
 
 1. **Soil Respiration Analysis**:
-   - Relating soil carbon flux (respiration) to MAP and MAT across the U.S.
-   - Identifying climatic influences on observed trends using regression.
+   - Relating soil carbon flux (respiration) to MAP and MAT across the
+   U.S.
+   - Identifying climatic influences on observed trends using
+   regression.
 
 2. **pH and Clay Content Comparison**:
-   - Cross-referencing MONet-observed properties with SoilGrids' datasets spatially and within climatic zones.
+   - Cross-referencing MONet-observed properties with SoilGrids'
+   datasets spatially and within climatic zones.
 
 3. **Data Visualization**:
-   - Generating maps of sample coverage and plots comparing different datasets.
+   - Generating maps of sample coverage and plots comparing different
+   datasets.

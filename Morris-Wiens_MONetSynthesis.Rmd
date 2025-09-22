@@ -87,13 +87,11 @@ names(myColors) <- c("MONet_resp", "MONet_pH", "MONet_clay",
 ```{r Rs data, warning=FALSE, message=FALSE}
 
 if(!"processed_Rs.RData" %in% list.files("R_data/")){
-    print("Generate processed Rs data by sourcing MONetDataPreprocessing.R")
+    stop("Generate processed Rs data by sourcing MONetDataPreprocessing.R")
 } else {
-  
     load("R_data/processed_Rs.RData")
-
-    print("Rs loaded, cheers!")
-  }
+    message("Rs loaded, cheers!")
+}
 
 ```
 
@@ -102,16 +100,11 @@ if(!"processed_Rs.RData" %in% list.files("R_data/")){
 ```{r clay data, warning=FALSE, message=FALSE}
 
 if(!"processed_clay.RData" %in% list.files("R_data/")){
-  
-  print("Generate processed clay data by sourcing MONetDataPreprocessing.R")
- 
+  stop("Generate processed clay data by sourcing MONetDataPreprocessing.R")
 } else {
-  
   load("R_data/processed_clay.RData")
-
-  print("Clay data loaded, cheers!")
+  message("Clay data loaded, cheers!")
 }
-
 
 ```
 
@@ -121,14 +114,10 @@ if(!"processed_clay.RData" %in% list.files("R_data/")){
 # 
 # 
 # if(!"processed_pH.RData" %in% list.files("R_data/")){
-#   
-#   print("Generate processed pH data by sourcing MONetDataPreprocessing.R")
-#  
+#   stop("Generate processed pH data by sourcing MONetDataPreprocessing.R")
 # } else {
-#   
 #   load("R_data/processed_pH.RData")
-# 
-#   print("pH data loaded, cheers!")
+#   message("pH data loaded, cheers!")
 # }
 
 ```
@@ -335,13 +324,13 @@ soil_Rh_buffer %>%
 
 monet_rs_index$respiration_rate <- monet_rs_index$rs_index
 
-bulk_density = 1.33 #g/cm3
-d = 10 #cm
-area_conv = 10000 #cm^3
-days_per_year = 365 # days in year
-mass_conv = 1000 #mg/g
+bulk_density <- 1.33 #g/cm3
+d <- 10 #cm
+area_conv <- 10000 #cm^3
+days_per_year <- 365 # days in year
+mass_conv <- 1000 #mg/g
 
-conversion_factor = 1/(bulk_density*d*area_conv)*1/days_per_year*mass_conv
+conversion_factor <- 1/(bulk_density*d*area_conv)*1/days_per_year*mass_conv
 
 soil_Rh_buffer %>%
   left_join(monet_rs_index, by =  "Site_Code") %>%
@@ -675,3 +664,11 @@ of MONet soil data and closely related databases. The code for making
 any figures that are called here can be found in
 MONetDataPrepocessing.R. There was so much more to explore than could be
 easily included in this compact format!  
+
+# Reproducibility
+
+This document was generated using the following packages and environment:
+
+```{r}
+sessionInfo()
+```
