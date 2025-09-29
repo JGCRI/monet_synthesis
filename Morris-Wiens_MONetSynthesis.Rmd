@@ -16,11 +16,11 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(
-  echo = TRUE,           # Show code in output
-  warning = FALSE,       # Hide warning messages
-  message = FALSE,       # Hide package loading messages
-  fig.width = 6,         # Default figure width
-  fig.height = 6,        # Default figure height
+  echo = TRUE, # Show code in output
+  warning = FALSE, # Hide warning messages
+  message = FALSE, # Hide package loading messages
+  fig.width = 6, # Default figure width
+  fig.height = 6, # Default figure height
   fig.align = "center"
 )
 ```
@@ -53,7 +53,6 @@ Geographic data handling: `sf`, `terra`, `tidyterra`, `raster`, `tiff`
 Precipitation and Temperature data: `geodata`
 
 ```{r libraries, results = "hide"}
-
 library(knitr)
 library(dplyr)
 library(tidyr)
@@ -68,62 +67,53 @@ library(tiff)
 library(geodata)
 
 sf_use_s2(FALSE)
-
 ```
 
 ```{r figure colors, results = "hide"}
-
 # Set up color palette for plotting. MONet in shades of blue and various comparisons in oranges
 
-myColors <- c( "#000080","#4040A0","#8080C0", "#D6AA80", "#D98040", "#CC5500")
+myColors <- c("#000080", "#4040A0", "#8080C0", "#D6AA80", "#D98040", "#CC5500")
 
-names(myColors) <- c("MONet_resp", "MONet_pH", "MONet_clay",
-                     "comp_clay", "comp_pH", "comp_resp")
-
+names(myColors) <- c(
+  "MONet_resp", "MONet_pH", "MONet_clay",
+  "comp_clay", "comp_pH", "comp_resp"
+)
 ```
 
 ### Load Pre-processed Data 1 of 3 (this can take a few minutes)
 
 ```{r Rs data, warning=FALSE, message=FALSE}
-
-if(!"processed_Rs.RData" %in% list.files("R_data/")){
-    stop("Generate processed Rs data by sourcing MONetDataPreprocessing.R")
+if (!"processed_Rs.RData" %in% list.files("R_data/")) {
+  stop("Generate processed Rs data by sourcing MONetDataPreprocessing.R")
 } else {
-    load("R_data/processed_Rs.RData")
-    message("Rs loaded, cheers!")
+  load("R_data/processed_Rs.RData")
+  message("Rs loaded, cheers!")
 }
-
 ```
 
 ### Load Pre-processed Data 2 of 3 (ditto)
 
 ```{r clay data, warning=FALSE, message=FALSE}
-
-if(!"processed_clay.RData" %in% list.files("R_data/")){
+if (!"processed_clay.RData" %in% list.files("R_data/")) {
   stop("Generate processed clay data by sourcing MONetDataPreprocessing.R")
 } else {
   load("R_data/processed_clay.RData")
   message("Clay data loaded, cheers!")
 }
-
 ```
 
 ### Load Pre-processed Data 3 of 3 (ditto)
 
 ```{r pH data, warning=FALSE, message=FALSE}
-# 
-# 
-# if(!"processed_pH.RData" %in% list.files("R_data/")){
-#   stop("Generate processed pH data by sourcing MONetDataPreprocessing.R")
-# } else {
-#   load("R_data/processed_pH.RData")
-#   message("pH data loaded, cheers!")
-# }
-
+if (!"processed_pH.RData" %in% list.files("R_data/")) {
+  stop("Generate processed pH data by sourcing MONetDataPreprocessing.R")
+} else {
+  load("R_data/processed_pH.RData")
+  message("pH data loaded, cheers!")
+}
 ```
 
-# 1. Examining Soil Respiration relative to Mean Annual Precipitation
-# and Mean Annual Temperature
+# 1. Examining Soil Respiration relative to Mean Annual Precipitation and Mean Annual Temperature
 
 Soil respiration (Rs) captures aspects of biological activity in soil
 over variable time scales. It serves as a critical indicator for
@@ -145,8 +135,7 @@ characteristics.
 
 ![SRDB and MONet Rs Sample Sites](./figures/srdb_MONet_conus_sites.png)
 
-## Extract Mean Annual Precipitation (MAP) and Mean Annual Temperature
-## (MAT) for sample coordinates
+## Extract Mean Annual Precipitation (MAP) and Mean Annual Temperature (MAT) for sample coordinates
 
 Using the `geodata` package, \~1km\^2 gridded 10 minute precipitation
 and average temperature data from 1970-2000 is downloaded and and
@@ -155,7 +144,6 @@ to create timeseries of MAP and MAP for each sample location. A
 selection of sites are plotted for illustration.
 
 ```{r Extract MAP and MAT for samples, cache = TRUE, echo = FALSE}
-
 # Function to extract climate data: precipitation and temperature
 process_climate_data <- function(coords_df, ID_column) {
   coords_extracted <- st_coordinates(coords_df)
@@ -171,12 +159,14 @@ process_climate_data <- function(coords_df, ID_column) {
 
   # Calculate MAT and MAP
   coords_data <- coords_data %>%
-    mutate(MAT = rowMeans(tavg_extracted[, -1], na.rm = TRUE),
-           MAP = rowMeans(tprec_extracted[, -1], na.rm = TRUE) * 12) # Convert to annual precipitation
+    mutate(
+      MAT = rowMeans(tavg_extracted[, -1], na.rm = TRUE),
+      MAP = rowMeans(tprec_extracted[, -1], na.rm = TRUE) * 12
+    ) # Convert to annual precipitation
 
   # Reshape monthly precipitation data
   monthly_prec <- pivot_longer(tprec_extracted, -ID, names_to = "name", values_to = "precipitation")
-  
+
   # Reshape monthly temperature data
   monthly_temp <- pivot_longer(tavg_extracted, -ID, names_to = "name", values_to = "temperature")
 
@@ -201,7 +191,9 @@ plot_climatology <- function(monthly_data, title, y_label, value_column) {
 # Process monet_rs_coords, subset 12 sites and plot
 monet_data <- process_climate_data(monet_rs_coords, "Site_Code")
 set.seed(42)
-sampled_places_monet <- monet_data$annual %>% distinct(place) %>% sample_n(12)
+sampled_places_monet <- monet_data$annual %>%
+  distinct(place) %>%
+  sample_n(12)
 sampled_prec_monet <- monet_data$monthly_prec %>% filter(place %in% sampled_places_monet$place)
 sampled_temp_monet <- monet_data$monthly_temp %>% filter(place %in% sampled_places_monet$place)
 
@@ -212,14 +204,15 @@ ggarrange(p_monet_prec, p_monet_temp, ncol = 1, common.legend = TRUE, legend = "
 # Process SRDB_coords, subset 18 and plot
 srdb_data <- process_climate_data(SRDB_coords, "Record_number")
 set.seed(42)
-sampled_places_srdb <- srdb_data$annual %>% distinct(place) %>% sample_n(12)
+sampled_places_srdb <- srdb_data$annual %>%
+  distinct(place) %>%
+  sample_n(12)
 sampled_prec_srdb <- srdb_data$monthly_prec %>% filter(place %in% sampled_places_srdb$place)
 sampled_temp_srdb <- srdb_data$monthly_temp %>% filter(place %in% sampled_places_srdb$place)
 
 p_srdb_prec <- plot_climatology(sampled_prec_srdb, "MAP for SRDB subset", "Precipitation (mm)", "precipitation")
 p_srdb_temp <- plot_climatology(sampled_temp_srdb, "MAT for SRDB subset", "Air temperature (C)", "temperature")
 ggarrange(p_srdb_prec, p_srdb_temp, ncol = 1, common.legend = TRUE, legend = "bottom")
-
 ```
 
 ## **SRDB Conversion**
@@ -233,7 +226,7 @@ CO2-C / g soil / day using the following assumptions and parameters:
 
 Using the equation:
 
-$$\text{mg C g⁻¹ soil day⁻¹} = \left( \frac{\text{g C m² yr⁻¹}}{1.33 \times 10 \times 10,000} \right) \times \frac{1}{365} \times 1,000$$
+$$\text{mg C g⁻¹ soil day⁻¹} = \left( \frac{\text{g C m² yr⁻¹}}{\rho \times d \times 10,000} \right) \times \frac{1}{365} \times 1,000 $$
 
 ## **MONet Rs Index**
 
@@ -250,12 +243,13 @@ $$  R_{s} \text{ Index}= 0.65 \cdot \left( \frac{1}{3} \cdot R_{s, \text{top, 24
 + 0.35 \cdot \left( \frac{1}{3} \cdot R_{s, \text{bottom, 24 hr}} + \frac{2}{3} \cdot R_{s, \text{bottom, 96 hr}} \right) $$
 
 ```{r tidy MONet Rs data, include = FALSE}
-
 # Select soil respiration from MONet data
 monet_rs %>%
-  dplyr::select(Sample_Name, respiration_ppm_co2_c,
-         respiration_mg_co2_c_g_soil_day_24hour,
-         respiration_mg_co2_c_g_soil_day_96hour) -> monet_slim
+  dplyr::select(
+    Sample_Name, respiration_ppm_co2_c,
+    respiration_mg_co2_c_g_soil_day_24hour,
+    respiration_mg_co2_c_g_soil_day_96hour
+  ) -> monet_slim
 
 # Function to separate and add metadata from Sample_Name
 extract_metadata <- function(monet_slim) {
@@ -273,27 +267,32 @@ monet_rs_metadata <- extract_metadata(monet_slim)
 combined_monet <- monet_rs_metadata %>%
   inner_join(monet_data$annual, by = c("Site_Code" = "place"))
 
-#calculate respiration index and prep for combining with SRDB
+# calculate respiration index and prep for combining with SRDB
 monet_rs_index <- combined_monet %>%
-  dplyr::select(ID,
-                respiration_mg_co2_c_g_soil_day_24hour,
-                respiration_mg_co2_c_g_soil_day_96hour,
-                Site_Code, Core_Section, MAT, MAP) %>%
+  dplyr::select(
+    ID,
+    respiration_mg_co2_c_g_soil_day_24hour,
+    respiration_mg_co2_c_g_soil_day_96hour,
+    Site_Code, Core_Section, MAT, MAP
+  ) %>%
   na.omit() %>%
   group_by(ID) %>%
-  mutate(weighted_time_respiration = (1/3) * respiration_mg_co2_c_g_soil_day_24hour + (2/3) * respiration_mg_co2_c_g_soil_day_96hour) %>%
+  mutate(weighted_time_respiration = (1 / 3) * respiration_mg_co2_c_g_soil_day_24hour + (2 / 3) * respiration_mg_co2_c_g_soil_day_96hour) %>%
   group_by(Site_Code) %>%
   summarise(
-    rs_index = sum( case_when(
+    rs_index = sum(
+      case_when(
         Core_Section == "TOP" ~ 0.65 * weighted_time_respiration,
-        Core_Section == "BTM" ~ 0.35 * weighted_time_respiration),
-      na.rm = TRUE),
-    .groups = "drop") %>%
+        Core_Section == "BTM" ~ 0.35 * weighted_time_respiration
+      ),
+      na.rm = TRUE
+    ),
+    .groups = "drop"
+  ) %>%
   left_join(combined_monet %>% distinct(Site_Code, MAT, MAP), by = "Site_Code") %>%
   mutate(
     source = "MONet"
   )
-
 ```
 
 ## One to One for Rs
@@ -307,39 +306,45 @@ In the figure below, the vertical bars represent the calculated
 confidence interval of the SRDB Rs and the solid line represents y=x.
 
 ```{r extract SRDB Rs data, echo = FALSE}
-
-#Plot both Rs datasets
+# Plot both Rs datasets
 soil_Rh_buffer %>%
-  left_join(monet_rs_index, by =  "Site_Code") %>%
-  mutate(ymin = srdb_mean - srdb_sd,
-         ymax = srdb_mean + srdb_sd)%>%
-  ggplot(aes(x = rs_index, y = srdb_mean))+
-  geom_point() + lims(x = c(10,80), y = c(10,80)) +
-  geom_errorbar(aes(x = rs_index , ymin = ymin, ymax = ymax))+
-  geom_abline(intercept = 0, slope = 1, color = "black")+
-  stat_smooth(formula = y~x,method = "lm", se = TRUE, level = 0.95)+
-  labs(title = "**raw** SRDB Rs vs MONet Rs index",
-       x = "mg CO2-C per g soil per d", y = "g CO2-C per m2 per yr")+
+  left_join(monet_rs_index, by = "Site_Code") %>%
+  mutate(
+    ymin = srdb_mean - srdb_sd,
+    ymax = srdb_mean + srdb_sd
+  ) %>%
+  ggplot(aes(x = rs_index, y = srdb_mean)) +
+  geom_point() +
+  lims(x = c(10, 80), y = c(10, 80)) +
+  geom_errorbar(aes(x = rs_index, ymin = ymin, ymax = ymax)) +
+  geom_abline(intercept = 0, slope = 1, color = "black") +
+  stat_smooth(formula = y ~ x, method = "lm", se = TRUE, level = 0.95) +
+  labs(
+    title = "**raw** SRDB Rs vs MONet Rs index",
+    x = "mg CO2-C per g soil per d", y = "g CO2-C per m2 per yr"
+  ) +
   theme_bw()
 
 monet_rs_index$respiration_rate <- monet_rs_index$rs_index
 
-bulk_density <- 1.33 #g/cm3
-d <- 10 #cm
-area_conv <- 10000 #cm^3
+bulk_density <- 1.33 # g/cm3
+d <- 10 # cm
+area_conv <- 10000 # cm^3
 days_per_year <- 365 # days in year
-mass_conv <- 1000 #mg/g
+mass_conv <- 1000 # mg/g
 
-conversion_factor <- 1/(bulk_density*d*area_conv)*1/days_per_year*mass_conv
+conversion_factor <- 1 / (bulk_density * d * area_conv) * 1 / days_per_year * mass_conv
 
 soil_Rh_buffer %>%
-  left_join(monet_rs_index, by =  "Site_Code") %>%
+  left_join(monet_rs_index, by = "Site_Code") %>%
   filter(!is.na(rs_index)) %>%
-  distinct(Site_Code, respiration_rate, srdb_count, srdb_sd, srdb_mean, MAP, MAT, source)%>%
+  distinct(Site_Code, respiration_rate, srdb_count, srdb_sd, srdb_mean, MAP, MAT, source) %>%
   dplyr::select(-"respiration_rate") %>%
   mutate(respiration_rate = srdb_mean * conversion_factor) %>%
-  dplyr::select("Site_Code", "respiration_rate",
-         "srdb_count", "srdb_sd", "MAT", "MAP") %>%
+  dplyr::select(
+    "Site_Code", "respiration_rate",
+    "srdb_count", "srdb_sd", "MAT", "MAP"
+  ) %>%
   mutate(source = "SRDB") -> srdb_ready2_join
 
 bind_rows(monet_rs_index, srdb_ready2_join) -> rs_combined
@@ -348,10 +353,10 @@ bind_rows(monet_rs_index, srdb_ready2_join) -> rs_combined
 summary_table <- rs_combined %>%
   group_by(source) %>%
   summarize(
-    min_respiration_rate = round(min(respiration_rate, na.rm = TRUE),4),
-    max_respiration_rate = round(max(respiration_rate, na.rm = TRUE),4),
-    mean_respiration_rate = round(mean(respiration_rate, na.rm = TRUE),4)
-  )%>%
+    min_respiration_rate = round(min(respiration_rate, na.rm = TRUE), 4),
+    max_respiration_rate = round(max(respiration_rate, na.rm = TRUE), 4),
+    mean_respiration_rate = round(mean(respiration_rate, na.rm = TRUE), 4)
+  ) %>%
   mutate(Units = "g CO2-C per m2 per yr")
 
 # Display the table using kable
@@ -361,20 +366,18 @@ summary_table %>%
     col.names = c("Source", "Min Respiration Rate", "Max Respiration Rate", "Mean Respiration Rate", "Units"),
     format = "html"
   )
-
 ```
 
 ## Impact of MAP and MAT on Soil Respiration by source
 
-The following figure show the relationship of MONet data points and
+The following figures show the relationship of MONet data points and
 median values of the gridded SRDB from a 1000m buffer around MONet
 sites. SRDB has a stronger correlation with MAP and MAT, but both MONet
 and SRDB show a positive relationship. These figures reveal that the
 current MONet dataset lacks representation of soil samples with MAP of
-300-1000 mm/year.
+500-1000 mm/year.
 
 ```{r Rs Analysis, fig.dim=c(9,6), fig.align='center'}
-
 cd4m <- rs_combined %>%
   group_by(source) %>%
   mutate(respiration_z = (respiration_rate - mean(respiration_rate)) / sd(respiration_rate)) %>%
@@ -392,9 +395,11 @@ cd4m %>%
   geom_smooth(method = "lm", se = FALSE, aes(color = source)) + # Regression line
   facet_wrap(climate_parameter ~ ., scales = "free_x") + # Facet by source and climate_parameter
   stat_poly_eq(
-    aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~"),
-        group = source,
-        color = source),
+    aes(
+      label = paste(..eq.label.., ..rr.label.., sep = "~~~"),
+      group = source,
+      color = source
+    ),
     formula = y ~ x,
     parse = TRUE,
     size = 3
@@ -418,9 +423,11 @@ cd4m %>%
   geom_smooth(method = "lm", se = FALSE, aes(color = source)) + # Regression line
   facet_wrap(source ~ climate_parameter, scales = "free") + # Facet by source and climate_parameter
   stat_poly_eq(
-    aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~"),
-        group = source,
-        color = source),
+    aes(
+      label = paste(..eq.label.., ..rr.label.., sep = "~~~"),
+      group = source,
+      color = source
+    ),
     formula = y ~ x,
     parse = TRUE,
     size = 3
@@ -432,12 +439,11 @@ cd4m %>%
   ) +
   scale_color_manual(values = c("SRDB" = "#0072B2", "MONet" = "#D55E00")) +
   theme_bw()
-
 ```
 
 # 2. pH assessemnt within Köppen Climate Zones and directly to SoilGrids
 
-Soil pH, acts as a proxy for biochemical interactions, particularly with
+Soil pH acts as a proxy for biochemical interactions, particularly with
 abiotic factors such as soil mineralogy and atmospheric chemical
 deposition. As a fundamental property of soil chemistry, it provides
 valuable context for interpreting molecular observations. In this
@@ -474,28 +480,25 @@ estimate at the higher end.
 ## Distribution of pH in each region
 
 ```{r SG functions, include = FALSE}
-
-sg_random_sample <- function(MONet_sg_top, sample_sizes_sg_top, seeds){
-  
+sg_random_sample <- function(MONet_sg_top, sample_sizes_sg_top, seeds) {
   MONet_data <- MONet_sg_top %>%
     filter(source == "MONet")
-  
-  for(seed in seeds){
+
+  for (seed in seeds) {
     set.seed(seed)
-    for(zone in unique(sample_sizes_sg_top$Climate)){
-      
+    for (zone in unique(sample_sizes_sg_top$Climate)) {
       n_samples <- sample_sizes_sg_top$MONet[sample_sizes_sg_top$Climate == zone]
-    
-      sampled_sg_zone <- MONet_sg_top%>%
-        as.data.frame()%>%
-        filter(Climate == zone, source != "MONet")%>%
-        slice_sample(n = n_samples)%>%
+
+      sampled_sg_zone <- MONet_sg_top %>%
+        as.data.frame() %>%
+        filter(Climate == zone, source != "MONet") %>%
+        slice_sample(n = n_samples) %>%
         mutate(source = paste0("soilgrids_sample_", which(seed == seeds)))
-      
+
       MONet_data <- bind_rows(MONet_data, sampled_sg_zone)
     }
   }
-    return(MONet_data)
+  return(MONet_data)
 }
 
 process_soil_data <- function(type, section, MONet_df, sg_df, climate_mapping_df, sg_column_name) {
@@ -512,20 +515,21 @@ process_soil_data <- function(type, section, MONet_df, sg_df, climate_mapping_df
     filter(Climate %in% unique(MONet_data$Climate)) %>%
     rename(!!type := sg_column_name) %>%
     dplyr::select(Climate, !!type) %>%
-    mutate(source = "soilGrids",
-           !!type := !!sym(type) / 10) # convert units
+    mutate(
+      source = "soilGrids",
+      !!type := !!sym(type) / 10
+    ) # convert units
 
   # Combine MONet and SoilGrids data
   combined_data <- bind_rows(MONet_data, sg_data)
   return(combined_data)
 }
-
 ```
 
 We compared the distribution of MONet pH measurements by climate zone to
 a random sample of points from each climate zone in SoilGrids where n is
 the number of MONet sites per region. The median pH in the MONet samples
-was generally within the spread of the of the 25th and 75th confidence
+was generally within the spread of the 25th and 75th confidence
 intervals of the SoilGrids samples.
 
 ![Random sampling of SoilGrids vs MONet pH.](./figures/pH_random_sample.png)
@@ -534,19 +538,17 @@ intervals of the SoilGrids samples.
 
 ## MONet datapoints not in soilgrids
 
-This analysis identified 6 MONet sample sites in locations with
+This analysis identified 4 MONet sample sites in locations with
 incomplete data in the soil grids dataset. Even though these locations
 are considered as urban sites and not recorded in soil grids, having
 data on the soil biogeochemistry composition can offer insights into
-soil health and processes in urban environments. The 6 locations were
-made up of 3 site in College Park, MD, 2 in Baltimore, MD, and 1 in
+soil health and processes in urban environments. The 4 locations were
+made up of 3 site in Adelphi, MD and 1 in
 Philadelphia, PA:
 
 -   Northwest Baltimore Base of Slope Adelphi, MD
 -   Northwest Baltimore Mid Slope Adelphi, MD
 -   Northwest Baltimore Top of Slope Adelphi, MD
--   Winters Lane Lower Soil Pit (Baltimore, MD)
--   Winters Lane Upper Soil Pit (Baltimore, MD)
 -   Urban CZO (Philadelphia, PA)
 
 ![Gaps in SoilGrids Data](./figures/MONet_missing_from_sg.png)
@@ -570,42 +572,48 @@ lower end of the clay content range and over estimate at the higher end.
 
 ## Clay Content Violins
 
-```{r clay violin plots, fig.dim=c(10,10), echo=FALSE, warning=FALSE, message=FALSE, cache = TRUE}
-
-generate_violin_plots <- function(plot_data, value_col, source_mapping, title, x_label){
-  plot_data%>%
-    mutate(Experiment = as.factor(if_else(source == "MONet", "MONet_clay", "comp_clay")))%>%
-    filter(!is.na(axis_label))%>%
+```{r clay violin plots, fig.dim=c(9,8), echo=FALSE, warning=FALSE, message=FALSE, cache = TRUE}
+generate_violin_plots <- function(plot_data, value_col, source_mapping, title, x_label) {
+  plot_data %>%
+    mutate(Experiment = as.factor(if_else(source == "MONet", "MONet_clay", "comp_clay"))) %>%
+    filter(!is.na(axis_label)) %>%
     ggplot(aes(x = !!sym(value_col), y = axis_label, fill = Experiment, color = Experiment)) +
-      geom_violin(alpha = 0.7, 
-                  position = position_dodge(width = 0.8),
-                  scale = "width") +  # Equal widths regardless of sample size
-      geom_boxplot(fill = NA,
-                   position = position_dodge(width = 0.8),
-                   outlier.shape = NA)+
-      theme_bw()+
-   scale_fill_manual(name = "Experiment", values = myColors, labels = source_mapping)+
-   scale_color_manual(name = "Experiment", values = myColors, labels = source_mapping)+
-   labs(
-     title = title,
-     x = x_label,
-     y = "Climate Zone"
-   )+
-  scale_y_discrete(labels = label_wrap_gen(30))
+    geom_violin(
+      alpha = 0.7,
+      position = position_dodge(width = 0.8),
+      scale = "width"
+    ) + # Equal widths regardless of sample size
+    geom_boxplot(
+      fill = NA,
+      position = position_dodge(width = 0.8),
+      outlier.shape = NA
+    ) +
+    theme_bw() +
+    scale_fill_manual(name = "Experiment", values = myColors, labels = source_mapping) +
+    scale_color_manual(name = "Experiment", values = myColors, labels = source_mapping) +
+    labs(
+      title = title,
+      x = x_label,
+      y = "Climate Zone"
+    ) +
+    scale_y_discrete(labels = label_wrap_gen(30))
 }
 
-generate_violin_plots(plot_data = plot_clay_top,
-                      value_col = "Clay_percent", 
-                      source_mapping = c("comp_clay" = "Soilgrids", "MONet_clay" = "MONet"),
-                      title = "MONet and Soilgrids Clay Content by Climate Zone (Top sample)", 
-                      x_label = "Clay Content (%)")
+generate_violin_plots(
+  plot_data = plot_clay_top,
+  value_col = "Clay_percent",
+  source_mapping = c("comp_clay" = "Soilgrids", "MONet_clay" = "MONet"),
+  title = "MONet and SoilGrids Clay Content by Climate Zone (Top sample)",
+  x_label = "Clay Content (%)"
+)
 
-generate_violin_plots(plot_data = plot_clay_btm,
-                      value_col = "Clay_percent", 
-                      source_mapping = c("comp_clay" = "Soilgrids", "MONet_clay" = "MONet"),
-                      title = "MONet and Soilgrids Clay Content by Climate Zone (Bottom sample)", 
-                      x_label = "Clay Content (%)")
-
+generate_violin_plots(
+  plot_data = plot_clay_btm,
+  value_col = "Clay_percent",
+  source_mapping = c("comp_clay" = "Soilgrids", "MONet_clay" = "MONet"),
+  title = "MONet and SoilGrids Clay Content by Climate Zone (Bottom sample)",
+  x_label = "Clay Content (%)"
+)
 ```
 
 In climate regions with more MONet sample locations the distribution of
@@ -629,27 +637,30 @@ content of the 18 basins that make up CONUS.
 ### GCAM Clay Comparisons
 
 ```{r GCAM clay figure, fig.dim = c(8,5), cache = TRUE}
-MONet_GCAM_clay%>%
-  filter(core_section == "TOP")%>%
-  mutate(ymin = gcam_q1_value,
-         ymax = gcam_q3_value)%>%
-  ggplot(aes(x = Clay_percent_mean , y = gcam_average))+
-  geom_point(aes(color = glu_nm))+
-  stat_smooth(formula = y~x,method = "lm", se = TRUE, level = 0.95, alpha = 0.5)+
+MONet_GCAM_clay %>%
+  filter(core_section == "TOP") %>%
+  mutate(
+    ymin = gcam_q1_value,
+    ymax = gcam_q3_value
+  ) %>%
+  ggplot(aes(x = Clay_percent_mean, y = gcam_average)) +
+  geom_point(aes(color = glu_nm)) +
+  stat_smooth(formula = y ~ x, method = "lm", se = TRUE, level = 0.95, alpha = 0.5) +
   stat_poly_eq(
     aes(label = paste(..eq.label.., ..rr.label.., sep = "~~~")),
     formula = y ~ x,
     parse = TRUE,
     size = 3
-  )+
-  geom_errorbar(aes(x = Clay_percent_mean , ymin = ymin, ymax = ymax, color = glu_nm), alpha = 0.5)+
-  geom_errorbar(aes(x = gcam_average , xmin = Clay_percent_mean - monet_sd, xmax = Clay_percent_mean + monet_sd, color = glu_nm), alpha = 0.5)+
-  geom_abline(intercept = 0, slope = 1, color = "black")+
-  labs(title = "GCAM vs MONet Clay Content by Basin",
-       x = "MONet (% Clay)", y = "GCAM (% Clay)")+
-  theme_bw()+
+  ) +
+  geom_errorbar(aes(x = Clay_percent_mean, ymin = ymin, ymax = ymax, color = glu_nm), alpha = 0.5) +
+  geom_errorbar(aes(x = gcam_average, xmin = Clay_percent_mean - monet_sd, xmax = Clay_percent_mean + monet_sd, color = glu_nm), alpha = 0.5) +
+  geom_abline(intercept = 0, slope = 1, color = "black") +
+  labs(
+    title = "GCAM vs MONet Clay Content by Basin",
+    x = "MONet (% Clay)", y = "GCAM (% Clay)"
+  ) +
+  theme_bw() +
   theme(plot.title = element_text(size = 16))
-
 ```
 Error bars for each point suggest variability and uncertainty in clay
 content measurements within each basin. The 1:1 line (black) shows where
@@ -662,7 +673,7 @@ lower clay contents and lower at higher clay contents.
 This markdown has walked through some high-level analysis and comparison
 of MONet soil data and closely related databases. The code for making
 any figures that are called here can be found in
-MONetDataPrepocessing.R. There was so much more to explore than could be
+`R/MONetDataPrepocessing.R`. There was so much more to explore than could be
 easily included in this compact format!  
 
 # Reproducibility

@@ -11,9 +11,9 @@
 ## What is MONet?
 
 The **M**olecular **O**bservation **Net**work
-(https://www.emsl.pnnl.gov/monet) is on ongoing project developed by the
-Environmental Molecular Sciences Laboratory at Pacific Northwest
-National Lab, with aims to create a continential scale database of
+(https://www.emsl.pnnl.gov/monet) is an ongoing project developed 
+by the Environmental Molecular Sciences Laboratory at Pacific Northwest
+National Laboratory, with aims to create a continential scale database of
 standardized soil molecular properties to advance the understanding of
 soil biogeochemistry. The **MONet Data Synthesis Project** aims to
 systematically compare and integrate soil data from **MONet** with
