@@ -1,36 +1,37 @@
 
 library(sf)
 library(dplyr)
+library(viridis)
 library(ggplot2)
 library(stringdist)
 
 # Web Soil Survey data, user-defined AOI
-attributes <- st_read("data/wss/plot_soilmu_a_aoi.shp")
-colnames(attributes)
+#Sys.setenv("SHAPE_RESTORE_SHX" = "YES")
+attributes <- st_read("data/wss/soilmu_a_aoi.shp")
 
-taxonomy_1 <- read.csv("data/wss/Report - MANU - Legend by Symbol_GrandMesa.csv")
-taxonomy_2 <- read.csv("data/wss/Report - MANU - Legend by Symbol_Gunnison.csv")
-taxonomy_3 <- read.csv("data/wss/Report - MANU - Legend by Symbol_Taylor.csv")
+taxonomy_1 <- read.csv("data/wss/Map Unit Legend_grandmesa.csv")
+taxonomy_2 <- read.csv("data/wss/Map Unit Legend_gunnison.csv")
+taxonomy_3 <- read.csv("data/wss/Map Unit Legend_taylor.csv")
 
 taxonomy <- rbind(taxonomy_1, taxonomy_2, taxonomy_3)
 
-colnames(taxonomy)[colnames(taxonomy) == "musym"] <- "MUSYM"
+colnames(taxonomy)[colnames(taxonomy) == "Map.Unit.Symbol"] <- "MUSYM"
 
 combined_data <- attributes %>% left_join(taxonomy, by = "MUSYM")
 
 
-# Combine similar `muname` values in `combined_data`
+# Combine similar `Map.Unit.Name` values in `combined_data`
 combined_data <- combined_data %>%
   mutate(
     muname_grouped = case_when(
-      muname %in% c("Water", "WATER") ~ "Water",
-      muname %in% c("Rock outcrop", "Rock land",
+      Map.Unit.Name %in% c("Water", "WATER") ~ "Water",
+      Map.Unit.Name %in% c("Rock outcrop", "Rock land",
                     "Rock slides", "Rubble land",
                     "Shale rock land") ~ "Rock catch-all",
-      muname %in% c("Landslides and Gullied land",
+      Map.Unit.Name %in% c("Landslides and Gullied land",
                     "Stony colluvial land",
                     "Alluvial land") ~ "Floodplain and Landslides",
-      TRUE ~ muname # Keep all other values as-is
+      TRUE ~ Map.Unit.Name # Keep all other values as-is
     )
   )
 
@@ -134,15 +135,20 @@ final_data <- combined_data %>%
     Modifier_Subgroup = ifelse(Soil_Order == "N/A", "N/A", Modifier_Subgroup)
   )
 
-ggplot(data = final_data[final_data$Modifier_Subgroup != "N/A",]) +
+
+#coord_sf(default_crs = sf::st_crs(final_data))
+
+base_map <- ggplot(data = final_data[final_data$Modifier_Subgroup != "N/A",]) +
   geom_sf(aes(fill = Modifier_Subgroup)) + # Use fill to group by soil subgroup
+  scale_fill_viridis(option = "magma", discrete = TRUE) + # Add magma palette
   ggtitle("Soil Orders") +
   theme_minimal() +
   theme(
     plot.title = element_text(hjust = 0.5),
-    legend.position = "right"
+    legend.position = "none"
   ) +
-  labs(fill = "Soil Subgroup") # Customize legend title
+  labs(fill = "Soil Subgroup") +
+  coord_sf(lims_method = "geometry_bbox")
 
 # Define clay content mapping based on Soil_Order
 final_data <- final_data %>%
@@ -156,3 +162,6 @@ final_data <- final_data %>%
       TRUE                        ~ NA_character_ # Default if no match
     )
   )
+
+# Filter points based on actual geometries
+filtered_points <- clay_loc_sf_top[sf::st_intersects(clay_loc_sf_top, final_data, sparse = FALSE), ]
