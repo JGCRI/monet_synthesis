@@ -163,5 +163,11 @@ final_data <- final_data %>%
     )
   )
 
+wss_bbox <- st_bbox(final_data)
+# Convert bbox to an sfc geometry
+wss_bbox_sf <- st_as_sfc(wss_bbox)
+
 # Filter points based on actual geometries
-filtered_points <- clay_loc_sf_top[sf::st_intersects(clay_loc_sf_top, final_data, sparse = FALSE), ]
+filtered_points <- st_filter(clay_loc_sf_top, wss_bbox_sf, .predicate = st_intersects)
+
+

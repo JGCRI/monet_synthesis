@@ -35,10 +35,19 @@ combined_label_colors <- setNames(
 ggplot(data = final_data[final_data$Soil_Order != "N/A",]) +
   geom_sf(aes(fill = combined_label)) + # Use combined_label for fill mapping
   scale_fill_manual(values = combined_label_colors) +
-  geom_sf(data = filtered_points_bbox,
-          aes(color = Clay_percent), size = 2) +
-  scale_color_viridis_c(option = "mako") +
+  geom_sf(data = filtered_points, aes(color = Clay_percent), size = 2) +
   theme_minimal() +
+  theme(
+    legend.position = "bottom",
+    plot.title = element_text(hjust = 0.5)
+  ) +
+  ggtitle("Clay Content by Soil Order")
+
+ggplot(data = final_data[final_data$Soil_Order != "N/A",]) +
+  geom_sf(aes(fill = combined_label)) + # Use combined_label for fill mapping
+  scale_fill_manual(values = combined_label_colors) +
+  geom_sf(data = filtered_points, color = "red", size = 2) + # Add red points
+  theme_minimal() + labs(fill = "Order") +
   theme(
     legend.position = "bottom",
     plot.title = element_text(hjust = 0.5)
